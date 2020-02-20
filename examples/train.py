@@ -9,7 +9,9 @@ from tensorflow.keras.utils import plot_model, to_categorical
 import numpy as np
 from IPython import embed
 
-my_matmul_module = tf.load_op_library('./matMul.so')
+import sys
+sys.path.append('..')
+from hostLib.layers.conv2D import Conv2D as Conv2DFPGA
 
 batch_size = 128
 num_classes = 10
@@ -36,15 +38,6 @@ print(x_test.shape[0], 'test samples')
 # convert class vectors to binary class matrices
 y_train = to_categorical(y_train, num_classes)
 y_test = to_categorical(y_test, num_classes)
-
-class Conv2DFPGA(layers.Layer):
-  def __init__(self, kernel):
-    super(Conv2DFPGA, self).__init__()
-    self.kernel = kernel
-  def call(self, inputs):
-    ints = tf.dtypes.cast(inputs, dtype=tf.int32)
-    outs = my_matmul_module.MyConv2D(input=ints, filter=ints)
-    return tf.dtypes.cast(outs, dtype=tf.float32)
 
 model = Sequential()
 model.add(Conv2DFPGA([0,0]))

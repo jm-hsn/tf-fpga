@@ -2,3 +2,5 @@
 .vs/
 .vscode/
 *.tar
+__pycache__/
+*.o
