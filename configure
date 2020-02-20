@@ -1,0 +1,12 @@
+#!/bin/bash
+
+BUILD_DIR=$1
+if [ "" = "$BUILD_DIR" ]; then
+    BUILD_DIR='./build'
+fi
+
+mkdir -p $BUILD_DIR
+
+python3 -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))' > $BUILD_DIR/TF_CFLAGS
+python3 -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))' > $BUILD_DIR/TF_LFLAGS
+

@@ -3,7 +3,23 @@
 
 #include "conv2D.hpp"
 
-void Conv2DOp::Compute(OpKernelContext* context) {
+volatile int instances = 0;
+pthread_t tDelay;
+pthread_attr_t attr;
+typedef void (*fptr)();
+void *delayThread(void *ref) {
+  sleep(1);
+  fptr done = reinterpret_cast<fptr>(ref);
+  printf("cb!\n");
+  done();
+  return 0;
+}
+
+Conv2DOp::Conv2DOp(OpKernelConstruction* context) : AsyncOpKernel(context) {
+  instance = instances++;
+};
+
+void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
   // Input tensor is of the following dimensions:
   // [ batch, in_rows, in_cols, in_depth ]
   const Tensor& input = context->input(0);
@@ -11,6 +27,15 @@ void Conv2DOp::Compute(OpKernelContext* context) {
   // Input filter is of the following dimensions:
   // [ filter_rows, filter_cols, in_depth, out_depth]
   const Tensor& filter = context->input(1);
+  TensorShape filterShape = filter.shape();
+
+
+  printf("\ninstance: %d shape: ", instance);
+  for(int i=0; i<filterShape.dims(); i++) {
+    printf(" %lld", filter.shape().dim_size(i));
+  }
+  printf("\n");
+  sleep(1);
 
   TensorShape out_shape = input.shape();
 
@@ -19,12 +44,7 @@ void Conv2DOp::Compute(OpKernelContext* context) {
   Tensor* output = nullptr;
   OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
-  std::cout << "Conv2D" << std::endl;
-
-  // If there is nothing to compute, return.
-  if (out_shape.num_elements() == 0) {
-    return;
-  }
+  pthread_create(&tDelay, &attr, delayThread, static_cast<void*>(&done));
 
   
 }

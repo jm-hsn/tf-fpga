@@ -39,13 +39,27 @@ print(x_test.shape[0], 'test samples')
 y_train = to_categorical(y_train, num_classes)
 y_test = to_categorical(y_test, num_classes)
 
+a = layers.Input(shape=(28, 28, 1))
+b = Conv2DFPGA(2)(a)
+c = Conv2DFPGA(2)(a)
+d = Conv2DFPGA(2)(a)
+e = Conv2DFPGA(2)(a)
+
+x = layers.Add()([b,c,d,e])
+y = layers.Flatten()(x)
+z = layers.Dense(num_classes, activation='softmax')(y)
+
+model = Model(inputs=a, outputs=z)
+"""
 model = Sequential()
+model.add(Conv2DFPGA([0,0]))
+model.add(Conv2DFPGA([0,0]))
 model.add(Conv2DFPGA([0,0]))
 model.add(Flatten())
 model.add(Dense(128, activation='relu'))
 model.add(Dropout(0.5))
 model.add(Dense(num_classes, activation='softmax'))
-
+"""
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
