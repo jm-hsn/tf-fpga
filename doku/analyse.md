@@ -19,3 +19,12 @@
 - TF-includes sind im vorkompiliertem tensorflow Paket enthalten
   - beschränkter Zugriff auf Unterfunktionen interner Operationen
 - inputs können mit OP_REQUIRES eingeschränkt werden
+
+## Asynchrone Operatoren
+
+- werden wie synchrone OPs mit dem Model instanziiert
+- nutzen einen *done*-Callback, der 1x aufgerufen werden muss
+- parallele Stränge des Keras-Graphen werden gleichzeitig ausgeführt
+- standardmäßig werden nur 8 Operatoren gleichzeitig ausgeführt
+- neue Schicht wird erst begonnen, wenn alle Operatoren der vorherigen fertig sind
+  - keine Vorteil den Datensatz einer Schicht auf mehrere OPs in Python aufzuteilen
