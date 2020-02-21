@@ -4,19 +4,24 @@
 #include "conv2D.hpp"
 
 volatile int instances = 0;
-pthread_t tDelay;
-pthread_attr_t attr;
-typedef void (*fptr)();
-void *delayThread(void *ref) {
-  sleep(1);
-  fptr done = reinterpret_cast<fptr>(ref);
-  printf("cb!\n");
+volatile int inParallel = 0;
+std::mutex mu;
+
+void delayThread(int ins, const char *name, int delay, std::function<void ()> done) {
+  mu.lock();
+  printf("parallel: %2d instance: %2d '%s' %dms sleep\n", ++inParallel, ins, name, delay);
+  mu.unlock();
+  std::this_thread::sleep_for(milliseconds(delay));
+  mu.lock();
+  printf("parallel: %2d instance: %2d '%s' done\n", --inParallel, ins, name);
+  mu.unlock();
   done();
-  return 0;
 }
 
 Conv2DOp::Conv2DOp(OpKernelConstruction* context) : AsyncOpKernel(context) {
   instance = instances++;
+  OP_REQUIRES_OK(context, context->GetAttr("delay", &delay));
+
 };
 
 void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
@@ -29,14 +34,6 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
   const Tensor& filter = context->input(1);
   TensorShape filterShape = filter.shape();
 
-
-  printf("\ninstance: %d shape: ", instance);
-  for(int i=0; i<filterShape.dims(); i++) {
-    printf(" %lld", filter.shape().dim_size(i));
-  }
-  printf("\n");
-  sleep(1);
-
   TensorShape out_shape = input.shape();
 
   // Output tensor is of the following dimensions:
@@ -44,8 +41,9 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
   Tensor* output = nullptr;
   OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
 
-  pthread_create(&tDelay, &attr, delayThread, static_cast<void*>(&done));
+  context->cancellation_manager();
 
+  std::async(std::launch::async, delayThread, instance, name().c_str(), delay, done);
   
 }
 

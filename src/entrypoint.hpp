@@ -12,6 +12,7 @@
 REGISTER_OP("MyConv2D")
     .Input("input: int32")
     .Input("filter: int32")
+    .Attr("delay: int")
     .Output("output: int32")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
       c->set_output(0, c->input(0));
