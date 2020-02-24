@@ -40,13 +40,20 @@ y_train = to_categorical(y_train, num_classes)
 y_test = to_categorical(y_test, num_classes)
 
 a = layers.Input(dtype=tf.int32, shape=(28, 28, 1))
-b = Conv2DFPGA(32)(a)
-c = Conv2DFPGA(16)(a)
-d = Conv2DFPGA(2)(b)
-e = Conv2DFPGA(4)(c)
+b = Conv2DFPGA(2)(a)
+c = Conv2DFPGA(1)(a)
+d = Conv2DFPGA(1)(b)
+e = Conv2DFPGA(2)(c)
 
-x = layers.Add()([layers.Flatten()(d),layers.Flatten()(e)])
-z = layers.Dense(num_classes, activation='softmax')(x)
+print(a)
+print(b)
+print(c)
+print(d)
+print(e)
+
+x = layers.Add()([d,e])
+y = layers.Flatten()(x)
+z = layers.Dense(num_classes, activation='softmax')(y)
 
 model = Model(inputs=a, outputs=z)
 """

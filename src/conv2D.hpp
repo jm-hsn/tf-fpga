@@ -25,5 +25,8 @@ class Conv2DOp : public AsyncOpKernel {
     int instance = -1;
     int delay = 1000;
 
+    void fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter);
+    void delayThread(DoneCallback done);
+
   //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);
 };

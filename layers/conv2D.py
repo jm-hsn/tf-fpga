@@ -36,19 +36,5 @@ class Conv2D(layers.Layer):
   def call(self, inputs):
 
     #out = tf.Tensor(tf.int32, shape=inputs.shape)
-
-    ch_inputs = tf.unstack(inputs, axis=3)#tf.dtypes.cast(inputs, dtype=tf.int32), axis=3)
-    ch_kernel = tf.unstack(tf.dtypes.cast(self.kernel, dtype=tf.int32), axis=2)
-
-    ch_outputs = [None] * len(ch_inputs)
-
-    for ch in range(len(ch_inputs)):
-      print(ch_inputs[ch], ch_kernel[ch])
-      ch_outputs[ch] = [None] * self.filters
-      kernel_2d = tf.unstack(ch_kernel[ch], axis=2)
-      for f in range(len(kernel_2d)):
-        ch_outputs[ch][f] = load_op.op_lib.MyConv2D(input=ch_inputs[ch], filter=kernel_2d[f], delay=(f+1)*100)
-      
-      ch_outputs[ch] = tf.stack(ch_outputs[ch], axis=2)
-    outs = tf.stack(ch_outputs, axis=2)
-    return outs #tf.dtypes.cast(outs, dtype=tf.float32)
+    intKernel = tf.cast(self.kernel, dtype=tf.int32)
+    return load_op.op_lib.MyConv2D(input=inputs, filter=intKernel, delay=1000*self.filters)

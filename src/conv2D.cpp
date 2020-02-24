@@ -5,17 +5,37 @@
 
 volatile int instances = 0;
 volatile int inParallel = 0;
-std::mutex mu;
+std::mutex printMu;
 
-void delayThread(int ins, const char *name, int delay, std::function<void ()> done) {
-  mu.lock();
-  printf("parallel: %2d instance: %2d '%s' %dms sleep\n", ++inParallel, ins, name, delay);
-  mu.unlock();
+void Conv2DOp::delayThread(DoneCallback done) {
+  printMu.lock();
+  printf("parallel: %2d instance: %2d '%s' %dms sleep\n", ++inParallel, instance, name().c_str(), delay);
+  printMu.unlock();
   std::this_thread::sleep_for(milliseconds(delay));
-  mu.lock();
-  printf("parallel: %2d instance: %2d '%s' done\n", --inParallel, ins, name);
-  mu.unlock();
+  printMu.lock();
+  printf("parallel: %2d instance: %2d '%s' done\n", --inParallel, instance, name().c_str());
+  printMu.unlock();
   done();
+}
+
+void Conv2DOp::fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter) {
+    auto input_tensor = input->tensor<int32, 4>();
+    auto kernel_tensor = kernel->tensor<int32, 4>();
+    auto output_tensor = output->tensor<int32, 4>();
+    int size = 24;
+    
+    printMu.lock();
+    //printf(" sample: %3d, channel: %3d, filter: %3d\n", sample, channel, filter);
+    /*
+    for(int x=0; x<size; x++) {
+      for(int y=0; y<size; y++) {
+        printf("%c", input_tensor(sample, x, y, channel) > 0 ? '#' : ' ');
+      }
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+    */
+    printMu.unlock();
 }
 
 Conv2DOp::Conv2DOp(OpKernelConstruction* context) : AsyncOpKernel(context) {
@@ -29,22 +49,38 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
   // [ batch, in_rows, in_cols, in_depth ]
   const Tensor& input = context->input(0);
 
+  ///const int32 *p = input.flat<int32>().data();
+
   // Input filter is of the following dimensions:
   // [ filter_rows, filter_cols, in_depth, out_depth]
-  const Tensor& filter = context->input(1);
-  TensorShape filterShape = filter.shape();
+  const Tensor& kernel = context->input(1);
 
-  TensorShape out_shape = input.shape();
+  TensorShape kernel_shape = kernel.shape();
+  TensorShape input_shape = input.shape();
+  TensorShape output_shape = input.shape();
+  
+
+  int batchSize = input_shape.dim_size(0);
+  int channels = input_shape.dim_size(3);
+  int filters = kernel_shape.dim_size(3);
+
+  output_shape.set_dim(1, 24);
+  output_shape.set_dim(2, 24);
+  output_shape.set_dim(3, channels * filters);
 
   // Output tensor is of the following dimensions:
   // [ in_batch, out_rows, out_cols, out_depth ]
   Tensor* output = nullptr;
-  OP_REQUIRES_OK(context, context->allocate_output(0, out_shape, &output));
+  OP_REQUIRES_OK(context, context->allocate_output(0, input_shape, &output));
 
-  context->cancellation_manager();
-
-  std::async(std::launch::async, delayThread, instance, name().c_str(), delay, done);
-  
+  for(int sample=0; sample<batchSize; sample++) {
+    for(int channel=0; channel<channels; channel++) {
+      for(int filter=0; filter<filters; filter++) {
+        std::async(std::launch::async, &Conv2DOp::fpgaCall, this, &input, &kernel, output, sample, channel, filter);
+      }
+    }
+  }
+  std::async(std::launch::async, &Conv2DOp::delayThread, this, done);
 }
 
 
