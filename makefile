@@ -18,7 +18,7 @@ EXECUTABLE=op_lib.so
 all: config $(BUILD_DIR)/$(EXECUTABLE)
 
 config:
-	@if [ ! -d "$(BUILD_DIR)" ]; then ./configure $(BUILD_DIR) || exit 1; fi
+	@if [ ! -f "$(BUILD_DIR)/TF_CFLAGS" -o ! -f "$(BUILD_DIR)/TF_LFLAGS" ]; then ./configure $(BUILD_DIR) || exit 1; fi
 
 $(BUILD_DIR)/$(EXECUTABLE): $(OBJS)
 	$(CXX) $(LFLAGS) $(TF_LFLAGS) -o $@ $^
