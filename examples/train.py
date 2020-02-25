@@ -27,8 +27,8 @@ x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
 x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
 input_shape = (img_rows, img_cols, 1)
 
-x_train = x_train.astype('int32')
-x_test = x_test.astype('int32')
+x_train = x_train.astype('float')
+x_test = x_test.astype('float')
 #x_train /= 255
 #x_test /= 255
 print('x_train shape:', x_train.shape)
@@ -51,11 +51,13 @@ print(c)
 print(d)
 print(e)
 
-x = layers.Add()([d,e])
+x = layers.Add()([c,c])
 y = layers.Flatten()(x)
 z = layers.Dense(num_classes, activation='softmax')(y)
 
 model = Model(inputs=a, outputs=z)
+print(model.output_shape)
+
 """
 model = Sequential()
 model.add(Conv2DFPGA([0,0]))

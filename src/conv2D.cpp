@@ -22,19 +22,18 @@ void Conv2DOp::fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *outpu
     auto input_tensor = input->tensor<int32, 4>();
     auto kernel_tensor = kernel->tensor<int32, 4>();
     auto output_tensor = output->tensor<int32, 4>();
-    int size = 24;
     
     printMu.lock();
-    //printf(" sample: %3d, channel: %3d, filter: %3d\n", sample, channel, filter);
-    /*
-    for(int x=0; x<size; x++) {
-      for(int y=0; y<size; y++) {
+    printf(" sample: %3d, channel: %3d, filter: %3d\n", sample, channel, filter);
+    
+    for(int x=0; x<outputSize; x++) {
+      for(int y=0; y<outputSize; y++) {
         printf("%c", input_tensor(sample, x, y, channel) > 0 ? '#' : ' ');
       }
       std::cout << std::endl;
     }
     std::cout << std::endl;
-    */
+    
     printMu.unlock();
 }
 
@@ -57,21 +56,29 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
 
   TensorShape kernel_shape = kernel.shape();
   TensorShape input_shape = input.shape();
-  TensorShape output_shape = input.shape();
-  
+
 
   int batchSize = input_shape.dim_size(0);
   int channels = input_shape.dim_size(3);
   int filters = kernel_shape.dim_size(3);
 
-  output_shape.set_dim(1, 24);
-  output_shape.set_dim(2, 24);
+  TensorShape output_shape;
+  const int32 dims[] = {batchSize, outputSize, outputSize, channels * filters};
+  TensorShapeUtils::MakeShape(dims, 4, &output_shape);
+
+  output_shape.set_dim(0, batchSize);
+  output_shape.set_dim(1, outputSize);
+  output_shape.set_dim(2, outputSize);
   output_shape.set_dim(3, channels * filters);
+
+  printMu.lock();
+  std::cout << output_shape.DebugString() << std::endl;
+  printMu.unlock();
 
   // Output tensor is of the following dimensions:
   // [ in_batch, out_rows, out_cols, out_depth ]
   Tensor* output = nullptr;
-  OP_REQUIRES_OK(context, context->allocate_output(0, input_shape, &output));
+  OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));
 
   for(int sample=0; sample<batchSize; sample++) {
     for(int channel=0; channel<channels; channel++) {
