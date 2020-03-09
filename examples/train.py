@@ -51,7 +51,7 @@ print(c)
 print(d)
 print(e)
 
-x = layers.Add()([c,c])
+x = layers.Add()([d,e])
 y = layers.Flatten()(x)
 z = layers.Dense(num_classes, activation='softmax')(y)
 

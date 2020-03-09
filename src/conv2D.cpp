@@ -24,6 +24,7 @@ void Conv2DOp::fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *outpu
     auto output_tensor = output->tensor<int32, 4>();
     
     printMu.lock();
+    /*
     printf(" sample: %3d, channel: %3d, filter: %3d\n", sample, channel, filter);
     
     for(int x=0; x<outputSize; x++) {
@@ -33,7 +34,7 @@ void Conv2DOp::fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *outpu
       std::cout << std::endl;
     }
     std::cout << std::endl;
-    
+    */
     printMu.unlock();
 }
 
@@ -84,6 +85,7 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
     for(int channel=0; channel<channels; channel++) {
       for(int filter=0; filter<filters; filter++) {
         std::async(std::launch::async, &Conv2DOp::fpgaCall, this, &input, &kernel, output, sample, channel, filter);
+        
       }
     }
   }

@@ -3,6 +3,11 @@
 
 #include "entrypoint.hpp"
 
+
+using namespace tensorflow;
+using namespace tensorflow::shape_inference;
+
+
 Status DimensionsFromShape(ShapeHandle shape, TensorFormat format,
                            DimensionHandle* batch_dim,
                            gtl::MutableArraySlice<DimensionHandle> spatial_dims,
@@ -113,5 +118,9 @@ REGISTER_OP("MyConv2D")
     });
 
 REGISTER_KERNEL_BUILDER(Name("MyConv2D").Device(DEVICE_CPU), Conv2DOp);
+
+void __attribute__ ((constructor)) init(void) {
+    printf("starting fpga server\n");
+}
 
 #endif

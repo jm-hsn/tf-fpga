@@ -7,6 +7,6 @@
 #include "tensorflow/core/lib/math/math_util.h"
 
 #include "conv2D.hpp"
+#include "../lib/mlfpga/include/connectionManager.hpp"
 
-using namespace tensorflow;
-using namespace tensorflow::shape_inference;
+void __attribute__ ((constructor)) init(void);

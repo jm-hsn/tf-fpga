@@ -11,6 +11,5 @@
 
 # Milestones
 
-[Analyse](docs/analyse.md) des TF-Frameworks
+[Analyse und Erweiterung](docs/analyse.md) des TF-Frameworks
 -------
-
