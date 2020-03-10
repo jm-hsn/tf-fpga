@@ -15,7 +15,7 @@ from hostLib.layers.conv2D import Conv2D as Conv2DFPGA
 
 batch_size = 128
 num_classes = 10
-epochs = 1 # 12
+epochs = 1200
 
 # input image dimensions
 img_rows, img_cols = 28, 28

@@ -47,7 +47,7 @@ void perfTest() {
     usleep(0);
     Clock::time_point now = Clock::now();
 
-    if(chrono::duration_cast<milliseconds>(now - start).count() > 200) {
+    if(std::chrono::duration_cast<milliseconds>(now - start).count() > 200) {
       printf("rejected: %8d, sent: %8d\n", rejected, successful);
       for(uint_least32_t k=0; k<fpgaCount; k++) {
         printf(
@@ -58,7 +58,7 @@ void perfTest() {
           100.0 * fpgas[k].failedCounter / (1+fpgas[k].successCounter + fpgas[k].failedCounter), 
           fpgas[k].latency/1000,
           fpgas[k].jobCount(),
-          chrono::duration_cast<microseconds>(now - start).count() * (fpgas[k].successCounter-cnt[k]) *5 / 1000000
+          std::chrono::duration_cast<microseconds>(now - start).count() * (fpgas[k].successCounter-cnt[k]) *5 / 1000000
         );
         cnt[k] = fpgas[k].successCounter;
       }

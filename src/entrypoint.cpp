@@ -121,6 +121,7 @@ REGISTER_KERNEL_BUILDER(Name("MyConv2D").Device(DEVICE_CPU), Conv2DOp);
 
 void __attribute__ ((constructor)) init(void) {
     printf("starting fpga server\n");
+    connection_init();
 }
 
 #endif

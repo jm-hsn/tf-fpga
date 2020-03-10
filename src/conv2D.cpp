@@ -9,20 +9,39 @@ std::mutex printMu;
 
 void Conv2DOp::delayThread(DoneCallback done) {
   printMu.lock();
-  printf("parallel: %2d instance: %2d '%s' %dms sleep\n", ++inParallel, instance, name().c_str(), delay);
+  //printf("parallel: %2d instance: %2d '%s' %dms sleep\n", ++inParallel, instance, name().c_str(), delay);
   printMu.unlock();
   std::this_thread::sleep_for(milliseconds(delay));
   printMu.lock();
-  printf("parallel: %2d instance: %2d '%s' done\n", --inParallel, instance, name().c_str());
+  //printf("parallel: %2d instance: %2d '%s' done\n", --inParallel, instance, name().c_str());
   printMu.unlock();
   done();
 }
+
+int width = 224;
+int kernel = 5;
+int border = kernel/2;
+int sizeWithBorder = width + 2*border;
+int pixels = sizeWithBorder * sizeWithBorder;
+int tagCounter = 0;
 
 void Conv2DOp::fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter) {
     auto input_tensor = input->tensor<int32, 4>();
     auto kernel_tensor = kernel->tensor<int32, 4>();
     auto output_tensor = output->tensor<int32, 4>();
     
+    jobData job(pixels);
+    *job.moduleId = moduleIds[conv2D_5x5_Module];
+    job.tag = tagCounter++;
+
+    for(int x=0; x<outputSize; x++) {
+      for(int y=0; y<outputSize; y++) {
+        job.payload[x*outputSize + y] = input_tensor(sample, x, y, channel);
+      }
+    }
+
+    sendJob(&job, pixels);
+
     printMu.lock();
     /*
     printf(" sample: %3d, channel: %3d, filter: %3d\n", sample, channel, filter);
@@ -72,9 +91,9 @@ void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
   output_shape.set_dim(2, outputSize);
   output_shape.set_dim(3, channels * filters);
 
-  printMu.lock();
-  std::cout << output_shape.DebugString() << std::endl;
-  printMu.unlock();
+  //printMu.lock();
+  //std::cout << output_shape.DebugString() << std::endl;
+  //printMu.unlock();
 
   // Output tensor is of the following dimensions:
   // [ in_batch, out_rows, out_cols, out_depth ]
