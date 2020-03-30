@@ -1,38 +1,48 @@
 #include "../include/job.hpp"
 
-// jobData members
-
-
-jobData::jobData(uint payloadLength) {
-  wordCount = payloadLength + 4;
+WordBuffer::WordBuffer(size_t length) {
+  wordCount = length;
   bytes = (uint8_t*)malloc(wordCount * 4);
   assert(bytes != NULL);
-
-  //set all the pointers
-  jobId = &words[1];
-  moduleId = &words[2];
-  payload = &words[3];
-  crc = &words[wordCount-1];
-
-  //insert constant values
-  *preamble = PREAMBLE;
 }
-jobData::~jobData() {
+
+WordBuffer::~WordBuffer() {
   free(bytes);
 }
 
-void jobData::calcCRC() {
-  uint32_t sum = 0;
-  for(uint_least32_t i=1; i<wordCount-1; i++) {
-    sum += words[i];
-  }
-  *crc = -sum;
+JobData::JobData(uint payloadLength) : WordBuffer(payloadLength + 4) {
+  setPreamble(PREAMBLE);
 }
 
-bool jobData::checkCRC() {
+Job::Job(Module mod) : JobData(moduleSendPayloadLength[mod]), recvBuf(moduleRecvPayloadLength[mod] + 1) {
+  setModuleId(moduleIds[mod]);
+  setJobId(getRandomNumber());
+}
+
+//sets CRC of sendBuf
+void Job::calcCRC() {
   uint32_t sum = 0;
-  for(uint_least32_t i=1; i<wordCount-1; i++) {
-    sum += words[i];
+  for(uint_least32_t i=1; i<getWordCount()-1; i++) {
+    sum += getWord(i);
   }
-  return *crc == -sum;
+  setCRC(-sum);
+}
+
+//checks CRC of recvBuf
+bool Job::checkCRC() {
+  uint32_t sum = getPreamble() + getJobId() + getModuleId();
+  for(uint_least32_t i=1; i<recvBuf.getWordCount()-1; i++) {
+    sum += recvBuf.getWord(i);
+  }
+  return recvBuf.getWord(recvBuf.getWordCount()-1) == -sum;
+}
+
+void Job::setDoneCallback(DoneCallback cb) {
+  doneCb = cb;
+}
+
+void Job::isComplete() {
+  received = Clock::now();
+  if(doneCb)
+    doneCb();
 }

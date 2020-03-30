@@ -4,8 +4,13 @@
 #include <iostream>
 #include <stdio.h>
 #include <sys/types.h>
-#include <pthread.h>
-#include "udp.hpp"
+#include <thread>
+#include <future>
+#include <mutex>
+#include <condition_variable>
+
+#include "commFPGA.hpp"
+#include "worker.hpp"
 
 /*
   worker thread:
@@ -31,12 +36,29 @@
 
 */
 
-extern commFPGA fpgas[];
-extern const uint fpgaCount;
+class ConnectionManager {
+  public:
+    ConnectionManager();
+    ~ConnectionManager();
 
-int sendJob(jobData *job, uint recvPayloadLength);
-void connection_init();
-void connection_close();
+    void addFPGA(const char* ip, const uint port);
 
+    void start();
+
+    //send many Jobs and wait for all responses
+    int sendJobListSync(JobList &jobList);
+
+    //send many Jobs and call back
+    int sendJobListAsync(JobList &jobList);
+
+  private:
+    std::vector<std::reference_wrapper<commFPGA>> fpgas;
+    std::vector<std::reference_wrapper<Worker>> workers;
+    
+    void sendThread();
+    std::future<void> sendResult;
+
+    bool running = true;
+};
 
 #endif

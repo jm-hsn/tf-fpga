@@ -1,3 +1,6 @@
+#ifndef CONV2D_FPGA_H
+#define CONV2D_FPGA_H
+
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/function.h"
 #include <stdlib.h>
@@ -12,26 +15,40 @@
 #include "../lib/mlfpga/include/connectionManager.hpp"
 #include "../lib/mlfpga/include/modules.hpp"
 
-using namespace tensorflow;
-using namespace std::chrono;
-typedef FunctionDefHelper FDH;
+#include "entrypoint.hpp"
+
+namespace tf_lib {
+
+  using namespace tensorflow;
+  using namespace std::chrono;
+  typedef FunctionDefHelper FDH;
 
 
-class Conv2DOp : public AsyncOpKernel {
-  public:
-    explicit Conv2DOp(OpKernelConstruction* context);
+  class Conv2DOp : public AsyncOpKernel {
+    public:
+      explicit Conv2DOp(OpKernelConstruction* context);
 
-    void ComputeAsync(OpKernelContext* context, DoneCallback done) override;
+      void ComputeAsync(OpKernelContext* context, DoneCallback done) override;
 
-  private:
+    private:
 
-    int instance = -1;
-    int delay = 1000;
+      int instance = -1;
+      int delay = 1000;
 
-    int outputSize = 28;
+      int outputSize = 28;
+      int tagCounter = 0;
 
-    void fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter);
-    void delayThread(DoneCallback done);
+      int width = 224;
+      int kernel = 5;
+      int border = kernel/2;
+      int sizeWithBorder = width + 2*border;
+      int pixels = sizeWithBorder * sizeWithBorder;
 
-  //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);
-};
+      void fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter);
+      void delayThread(DoneCallback done);
+
+    //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);
+  };
+}
+
+#endif
