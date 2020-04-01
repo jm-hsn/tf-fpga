@@ -19,19 +19,14 @@
     queue response
     cb on overwrite + delete old resp
     fills send buffer
+    retransmit job
 
   send thread:
-    cycle fd
-    send 1 packet if available
+    send 1 packet per fpga if available
 
   recv thread:
-    select(readFD)
     recv data into response
-    cb on success + delete response
-
-  response thread:
-    search old responses
-    cb on timeout + delete response
+    cb on success
     
 
 */
@@ -46,14 +41,14 @@ class ConnectionManager {
     void start();
 
     //send many Jobs and wait for all responses
-    int sendJobListSync(JobList &jobList);
+    int sendJobListSync(std::shared_ptr<JobList> &jobList);
 
     //send many Jobs and call back
-    int sendJobListAsync(JobList &jobList);
+    int sendJobListAsync(std::shared_ptr<JobList> &jobList);
 
   private:
-    std::vector<std::reference_wrapper<commFPGA>> fpgas;
-    std::vector<std::reference_wrapper<Worker>> workers;
+    std::vector<std::unique_ptr<commFPGA>> fpgas;
+    std::vector<std::unique_ptr<Worker>> workers;
     
     void sendThread();
     std::future<void> sendResult;

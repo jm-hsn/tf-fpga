@@ -27,11 +27,11 @@ namespace tf_lib {
     auto input_tensor = input.tensor<int32, 1>();
     auto output_tensor = output->tensor<int32, 1>();
 
-    JobList jobs(Module::dummyModule, 1);
-    jobs.getJob(0).setPayload(0, input_tensor(0));
+    std::shared_ptr<JobList> jobs(new JobList(Module::dummyModule, 1));
+    jobs->getJob(0)->setPayload(0, input_tensor(0));
 
-    jobs.setDoneCallback([output_tensor, &jobs, done]{
-      output_tensor(0) = jobs.getJob(0).getResponsePayload(0);
+    jobs->setDoneCallback([output_tensor, &jobs, done]{
+      output_tensor(0) = jobs->getJob(0)->getResponsePayload(0);
       done();
     });
 

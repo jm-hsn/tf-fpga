@@ -4,9 +4,8 @@ JobList::JobList(Module mod, size_t numberOfJobs) {
   jobCount = numberOfJobs;
   pendingJobCount = numberOfJobs;
   for(size_t i=0; i<numberOfJobs; i++) {
-    //jobs.emplace_back(mod);
-    Job job(mod);
-    job.setDoneCallback([this]{
+    std::shared_ptr<Job> job(new Job(mod));
+    job->setDoneCallback([this]{
       finishJob();
     });
     jobs.push_back(job);
@@ -24,16 +23,16 @@ void JobList::finishJob() {
   jobListDone.notify_all();
 }
 
-Job& JobList::getJob(size_t i) {
+std::shared_ptr<Job>& JobList::getJob(size_t i) {
   return jobs.at(i);
 }
 
-Job* JobList::getNextJob() {
+std::shared_ptr<Job> JobList::getNextJob() {
   for(size_t i=0; i<jobCount; i++) {
     size_t rotated_i = (i+nextJobIndex+1) % jobCount;
-    if(jobs.at(rotated_i).get().getState() == JobState::ready) {
+    if(jobs.at(rotated_i)->getState() == JobState::ready) {
       nextJobIndex = rotated_i;
-      return &jobs.at(rotated_i).get();
+      return jobs.at(rotated_i);
     }
   }
   return NULL;

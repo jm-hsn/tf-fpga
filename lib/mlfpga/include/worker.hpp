@@ -11,17 +11,17 @@
 
 class Worker {
   public:
-    Worker(std::vector<std::reference_wrapper<commFPGA>> &fpgas);
+    Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas);
     ~Worker();
 
     void start();
     
-    int assignJobList(JobList &jobList);
+    int assignJobList(std::shared_ptr<JobList> &jobList);
 
   private:
     std::mutex currentJobList_m;
-    JobList *currentJobList = NULL;
-    std::vector<std::reference_wrapper<commFPGA>> *fpgaVector;
+    std::shared_ptr<JobList> currentJobList = NULL;
+    std::vector<std::unique_ptr<commFPGA>> *fpgaVector;
 
     commFPGA* findAvailableFPGA();
     

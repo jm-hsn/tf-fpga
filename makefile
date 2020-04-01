@@ -5,7 +5,7 @@ INC_DIR=include
 BUILD_DIR=build
 FPGA_LIB_DIR=lib/mlfpga
 
-CFLAGS=-g -Wall -pthread -std=c++11
+CFLAGS=-g -Wall -std=c++11
 LFLAGS=-shared -Wl,--no-as-needed,-Map=$(BUILD_DIR)/project.map
 
 

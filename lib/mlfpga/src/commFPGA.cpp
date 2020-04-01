@@ -194,12 +194,12 @@ int commFPGA::sendRaw(uint8_t *buf, uint bufLen) {
   return byteIndex;
 }
 
-int commFPGA::assignJob(Job *job) {
+int commFPGA::assignJob(std::shared_ptr<Job> &job) {
   jobLock.lock();
   if(jobList.size() >= JOB_COUNT)
     return -1;
   
-  jobList.insert(std::pair<uint32_t,Job*>(job->getJobId(), job));
+  jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job));
   
   jobsActive++;
   jobLock.unlock();

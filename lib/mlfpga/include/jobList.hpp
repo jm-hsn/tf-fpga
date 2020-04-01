@@ -17,11 +17,11 @@ class JobList {
 
     size_t getPendingJobCount() const {return pendingJobCount;}
 
-    Job& getJob(size_t i);
+    std::shared_ptr<Job>& getJob(size_t i);
 
-    Job* getNextJob();
+    std::shared_ptr<Job> getNextJob();
   private:
-    std::vector<std::reference_wrapper<Job>> jobs;
+    std::vector<std::shared_ptr<Job>> jobs;
     DoneCallback doneCb;
 
     size_t jobCount;

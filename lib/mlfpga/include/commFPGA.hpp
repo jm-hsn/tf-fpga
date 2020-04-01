@@ -58,9 +58,9 @@ class commFPGA {
 
     //called by worker thread
     
-    int assignJob(Job *job);
+    int assignJob(std::shared_ptr<Job> &job);
     int fillBuffer(JobData *sendBuf);
-    int unassignJob(Job *job);
+    int unassignJob(std::shared_ptr<Job> &job);
 
     uint_least32_t jobCount();
     
@@ -73,7 +73,7 @@ class commFPGA {
     void recvUDP();
     int parseRaw(uint32_t *buf, size_t bufLen);
     
-    std::unordered_map<uint32_t,Job*>::iterator currentJob;
+    std::unordered_map<uint32_t,std::shared_ptr<Job>>::iterator currentJob;
     RecvState recvState = RecvState::checkPreamble;
     size_t recvPayloadIndex = 0;
 
@@ -88,7 +88,7 @@ class commFPGA {
     uint_least32_t sendBufferWriteIndex = 0;
 
     //list of pending responses
-    std::unordered_map<uint32_t,Job*> jobList;
+    std::unordered_map<uint32_t,std::shared_ptr<Job>> jobList;
     uint_least32_t jobsActive = 0;
     std::mutex jobLock;
 
