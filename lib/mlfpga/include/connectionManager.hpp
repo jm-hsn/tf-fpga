@@ -36,7 +36,7 @@ class ConnectionManager {
     ConnectionManager();
     ~ConnectionManager();
 
-    void addFPGA(const char* ip, const uint port);
+    void addFPGA(const char* ip, const uint port, bool bindSelf=false);
 
     void start();
 

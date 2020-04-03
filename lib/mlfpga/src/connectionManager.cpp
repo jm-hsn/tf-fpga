@@ -5,10 +5,9 @@ ConnectionManager::ConnectionManager() {
 }
 ConnectionManager::~ConnectionManager() {
   running = false;
-  sendResult.get();
 }
 
-void ConnectionManager::addFPGA(const char* ip, const uint port) {
+void ConnectionManager::addFPGA(const char* ip, const uint port, bool bindSelf) {
   fpgas.emplace_back(new commFPGA(ip, port));
   fpgas.back()->start();
 }
@@ -16,7 +15,13 @@ void ConnectionManager::addFPGA(const char* ip, const uint port) {
 int ConnectionManager::sendJobListAsync(std::shared_ptr<JobList> &jobList) {
   workers.emplace_back(new Worker(&fpgas));
   workers.back()->assignJobList(jobList);
-  workers.back()->start();
+  workers.back()->startAsync();
+  return 0;
+}
+int ConnectionManager::sendJobListSync(std::shared_ptr<JobList> &jobList) {
+  workers.emplace_back(new Worker(&fpgas));
+  workers.back()->assignJobList(jobList);
+  workers.back()->startSync();
   return 0;
 }
 

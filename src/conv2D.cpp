@@ -54,7 +54,7 @@ namespace tf_lib {
     auto input_tensor = input.tensor<int32, 4>();
     auto output_tensor = output->tensor<int32, 4>();
 
-    std::shared_ptr<JobList> jobs(new JobList(Module::dummyModule, batchSize * channels * filters));
+    std::shared_ptr<JobList> jobs(new JobList(Module::conv2D_5x5_Module, batchSize * channels * filters));
 
     for(int sample=0; sample<batchSize; sample++) {
       for(int channel=0; channel<channels; channel++) {

@@ -11,6 +11,7 @@ class JobList {
   public:
     JobList(Module mod, size_t numberOfJobs);
     void waitAll();
+    void waitOne(microseconds us);
     void finishJob();
 
     void setDoneCallback(DoneCallback cb);
@@ -19,7 +20,8 @@ class JobList {
 
     std::shared_ptr<Job>& getJob(size_t i);
 
-    std::shared_ptr<Job> getNextJob();
+    std::shared_ptr<Job>& getNextJob();
+    size_t getJobCount() const {return jobCount;}
   private:
     std::vector<std::shared_ptr<Job>> jobs;
     DoneCallback doneCb;

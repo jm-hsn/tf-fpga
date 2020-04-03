@@ -31,7 +31,7 @@
 #define UDP_MTU (1500) // size of recv UDP buffer in bytes
 #define JOB_COUNT (1024 * 4)
 
-//#define DEBUG_JOB_RESP
+#define DEBUG_JOB_RESP
 
 
 typedef std::chrono::high_resolution_clock Clock;
@@ -59,10 +59,9 @@ class commFPGA {
     //called by worker thread
     
     int assignJob(std::shared_ptr<Job> &job);
-    int fillBuffer(JobData *sendBuf);
     int unassignJob(std::shared_ptr<Job> &job);
 
-    uint_least32_t jobCount();
+    size_t jobCount();
     
     //called by send thread
     int sendRaw(uint8_t *buf, uint bufLen);
@@ -89,7 +88,6 @@ class commFPGA {
 
     //list of pending responses
     std::unordered_map<uint32_t,std::shared_ptr<Job>> jobList;
-    uint_least32_t jobsActive = 0;
     std::mutex jobLock;
 
     //listener for a single FPGA

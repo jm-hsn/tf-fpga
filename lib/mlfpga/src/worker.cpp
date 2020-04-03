@@ -7,8 +7,11 @@ Worker::~Worker() {
   hasJobList.notify_all();
 }
 
-void Worker::start() {
+void Worker::startAsync() {
   result = std::async(std::launch::async, &Worker::threadMain, this);
+}
+void Worker::startSync() {
+  threadMain();
 }
 
 int Worker::assignJobList(std::shared_ptr<JobList> &jobList) {
@@ -26,18 +29,62 @@ int Worker::threadMain() {
   if(currentJobList == NULL)
     return -1;
 
-  while(currentJobList->getPendingJobCount() > 0) {
-    std::shared_ptr<Job> job = currentJobList->getNextJob();
-    if(job == NULL) {
+  while(true) {
+    size_t remainingJobs = currentJobList->getJobCount();
+    Clock::time_point now = Clock::now(); 
+    commFPGA *fpga;
+    
+    for(size_t i=0; i<currentJobList->getJobCount(); i++) {
+      std::shared_ptr<Job> &job = currentJobList->getJob(i);
+      switch(job->getState()) {
+        case JobState::initialized:
+
+          break;
+        case JobState::ready:
+          sendJob(job);
+          break;
+        case JobState::sent:
+          if(std::chrono::duration_cast<microseconds>(now - job->getSent()).count() > 1000) {
+            fpga = (commFPGA*)job->getAssignedFPGA();
+            if(fpga != NULL) {
+              fpga->unassignJob(job);
+            }
+            if(job->getSendCounter() < 5) {
+              job->setState(JobState::ready);
+              sendJob(job);
+            } else {
+              job->setState(JobState::failed);
+              job->setReceived(false);
+            }
+          }
+          break;
+        case JobState::receiving:
+
+          break;
+        case JobState::finished:
+          remainingJobs--;
+          break;
+        case JobState::failed:
+          remainingJobs--;
+          break;
+      }
+    }
+    if(remainingJobs <= 0) {
       break;
     }
-    commFPGA *fpga = findAvailableFPGA();
-    if(fpga == NULL) {
-      continue;
-    }
-    fpga->assignJob(job);
+    currentJobList->waitOne(microseconds(1000));
   }
   return 0;
+}
+
+void Worker::sendJob(std::shared_ptr<Job> &job) {
+    commFPGA *fpga = findAvailableFPGA();
+    if(fpga == NULL) {
+      return;
+    }
+    if(fpga->assignJob(job) >= 0) {
+      job->setSent();
+    }
 }
 
 commFPGA* Worker::findAvailableFPGA() {

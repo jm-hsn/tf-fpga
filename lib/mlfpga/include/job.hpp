@@ -104,8 +104,18 @@ class Job : public JobData {
     JobState getState() const {return state;}
     void setState(JobState s) {state = s;}
 
-    void isComplete();
+    void setReady();
+    void setSent();
+    void setReceived(const bool success);
     void setDoneCallback(DoneCallback cb);
+
+    Clock::time_point getSent() const {return sent;}
+    Clock::time_point getReceived() const {return received;}
+
+    void* getAssignedFPGA() const {return assignedFPGA;}
+    void setAssignedFPGA(void *fpga) {assignedFPGA = fpga;}
+
+    size_t getSendCounter() const {return sendCounter;}
 
   private:
     //only payload and CRC of response
@@ -113,10 +123,11 @@ class Job : public JobData {
     DoneCallback doneCb = NULL;
 
     JobState state = JobState::initialized;
-    Clock::time_point created = Clock::now();
+    Clock::time_point sent;
     Clock::time_point received;
 
-    
+    void *assignedFPGA = NULL;
+    size_t sendCounter = 0;
 
 };
 

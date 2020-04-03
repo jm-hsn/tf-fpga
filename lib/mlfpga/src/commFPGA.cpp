@@ -48,7 +48,7 @@ void commFPGA::recvUDP() {
 }
 
 int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
-  jobLock.lock();
+  std::lock_guard<std::mutex> lk(jobLock);
 
   for(size_t i=0; i < bufLen; i++) {
     
@@ -57,6 +57,9 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
         if(buf[i] == PREAMBLE) {
           recvState = RecvState::checkJobId;
         }
+        #ifdef DEBUG_JOB_RESP
+          else printf("wrong preamble %08X\n", buf[i]);
+        #endif
         break;
 
       case RecvState::checkJobId: 
@@ -64,6 +67,9 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
         if(currentJob == jobList.end()) {
           i -= 1;
           recvState = RecvState::checkPreamble;
+          #ifdef DEBUG_JOB_RESP
+            printf("job %08X jobId not found\n", buf[i]);
+          #endif
         } else if(currentJob->second->getState() != JobState::sent) {
           #ifdef DEBUG_JOB_RESP
             printf("job %08X wasn't sent\n", buf[i]);
@@ -71,9 +77,7 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
           i -= 1;
           recvState = RecvState::checkPreamble;
         } else {
-          #ifdef DEBUG_JOB_RESP
-            printf("job %08X jobId not found\n", buf[i]);
-          #endif
+          assert(currentJob->second->getAssignedFPGA() == this);
           recvState = RecvState::checkModuleId;
         }
         break;
@@ -87,7 +91,7 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
           i = i - 2 < 0 ? -1 : i - 2;
           recvState = RecvState::checkPreamble;
           #ifdef DEBUG_JOB_RESP
-            printf("job %08X wrong moduleId %08X\n", *currentJobResp->jobId, word);
+            printf("job %08X wrong moduleId %08X\n", currentJob->second->getJobId(), buf[i]);
           #endif
         }
         break;
@@ -95,17 +99,16 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
         currentJob->second->setResponsePayload(recvPayloadIndex++, buf[i]);
         if(recvPayloadIndex >= currentJob->second->getResponseBufferWordCount()) {
           if(currentJob->second->checkCRC()) {
-            currentJob->second->setState(JobState::finished);
-            currentJob->second->isComplete();
+            currentJob->second->setReceived(true);
             jobList.erase(currentJob->second->getJobId());
           } else {
             currentJob->second->setState(JobState::sent);
             #ifdef DEBUG_JOB_RESP
-              printf("job %08X wrong crc %08X, %4d, %4d\n", *currentJobResp->jobId, word, bufLen, i);
-              for(uint_least32_t k=0; k<currentJobResp->wordCount; k++) {
-                printf(" %4d %08X", k, currentJobResp->words[k]);
+              printf("job %08X wrong crc %08X, %4d, %4d\n", currentJob->second->getJobId(), buf[i], bufLen, i);
+              for(uint_least32_t k=0; k<currentJob->second->getWordCount(); k++) {
+                printf(" %4d %08X", k, currentJob->second->getWord(k));
               }
-              cout << endl;
+              std::cout << std::endl;
             #endif
           }
           recvState = RecvState::checkPreamble;
@@ -113,8 +116,6 @@ int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
         break;
     }
   }
-
-  jobLock.unlock();
 
   return 0;
 }
@@ -195,15 +196,37 @@ int commFPGA::sendRaw(uint8_t *buf, uint bufLen) {
 }
 
 int commFPGA::assignJob(std::shared_ptr<Job> &job) {
-  jobLock.lock();
+
+  if(job->getAssignedFPGA() != NULL)
+    return -1;
+
+  std::lock_guard<std::mutex> lk(jobLock);
   if(jobList.size() >= JOB_COUNT)
     return -1;
   
+  uint_least32_t free = (sendBufferReadIndex - sendBufferWriteIndex) % MAX_JOB_LEN;
+  if(free < job->getWordCount() && free != 0)
+    return -1;
+
   jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job));
-  
-  jobsActive++;
-  jobLock.unlock();
+  job->setAssignedFPGA(this);
+
+  for(uint_least32_t i=0; i<job->getWordCount(); i++) {
+    sendBuffer[(sendBufferWriteIndex + i) % MAX_JOB_LEN] = __builtin_bswap32(job->getWord(i));
+    printf("%08X ", job->getWord(i));
+  }
+  printf("\n");
+  sendBufferWriteIndex = (sendBufferWriteIndex + job->getWordCount()) % MAX_JOB_LEN;
+
   return 0;
+}
+int commFPGA::unassignJob(std::shared_ptr<Job> &job) {
+  if(job->getAssignedFPGA() != this)
+    return -1;
+  
+  std::lock_guard<std::mutex> lk(jobLock);
+  job->setAssignedFPGA(NULL);
+  return jobList.erase(job->getJobId());
 }
 
 int commFPGA::sendFromBuffer() {
@@ -226,7 +249,7 @@ int commFPGA::sendFromBuffer() {
 
   int rc = sendRaw((uint8_t*)&sendBuffer[sendBufferReadIndex], (readEnd - sendBufferReadIndex) * 4);
 
-  
+
   if(readEnd < MAX_JOB_LEN)
     sendBufferReadIndex = readEnd;
   else
@@ -235,19 +258,6 @@ int commFPGA::sendFromBuffer() {
   return rc;
 }
 
-int commFPGA::fillBuffer(JobData *jobData) {
-  uint_least32_t free = (sendBufferReadIndex - sendBufferWriteIndex) % MAX_JOB_LEN;
-  //printf("free %8d %8d %8d\n", free, sendBufferReadIndex, sendBufferWriteIndex);
-  if(free < jobData->getWordCount() && free != 0)
-    return -1;
-
-  for(uint_least32_t i=0; i<jobData->getWordCount(); i++) {
-    sendBuffer[(sendBufferWriteIndex + i) % MAX_JOB_LEN] = __builtin_bswap32(jobData->getWord(i));
-  }
-  sendBufferWriteIndex = (sendBufferWriteIndex + jobData->getWordCount()) % MAX_JOB_LEN;
-  return 0;
-}
-
-uint_least32_t commFPGA::jobCount() {
-  return jobsActive;
+size_t commFPGA::jobCount() {
+  return jobList.size();
 }

@@ -44,8 +44,6 @@ namespace tf_lib {
       int sizeWithBorder = width + 2*border;
       int pixels = sizeWithBorder * sizeWithBorder;
 
-      void fpgaCall(const Tensor *input, const Tensor *kernel, Tensor *output, int sample, int channel, int filter);
-      void delayThread(DoneCallback done);
 
     //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);
   };

@@ -17,6 +17,11 @@ void JobList::waitAll() {
   jobListDone.wait(lk, [this]{return pendingJobCount <= 0;});
 }
 
+void JobList::waitOne(microseconds us) {
+  std::unique_lock<std::mutex> lk(pendingJobCount_m);
+  jobListDone.wait_for(lk, us);
+}
+
 void JobList::finishJob() {
   std::lock_guard<std::mutex> lk(pendingJobCount_m);
   pendingJobCount--;
@@ -27,15 +32,9 @@ std::shared_ptr<Job>& JobList::getJob(size_t i) {
   return jobs.at(i);
 }
 
-std::shared_ptr<Job> JobList::getNextJob() {
-  for(size_t i=0; i<jobCount; i++) {
-    size_t rotated_i = (i+nextJobIndex+1) % jobCount;
-    if(jobs.at(rotated_i)->getState() == JobState::ready) {
-      nextJobIndex = rotated_i;
-      return jobs.at(rotated_i);
-    }
-  }
-  return NULL;
+std::shared_ptr<Job>& JobList::getNextJob() {
+  nextJobIndex = (nextJobIndex+1) % jobCount;
+  return jobs.at(nextJobIndex);
 }
 
 void JobList::setDoneCallback(DoneCallback cb) {

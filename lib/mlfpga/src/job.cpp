@@ -41,8 +41,20 @@ void Job::setDoneCallback(DoneCallback cb) {
   doneCb = cb;
 }
 
-void Job::isComplete() {
+void Job::setReady() {
+  calcCRC();
+  setState(JobState::ready);
+}
+
+void Job::setReceived(const bool success) {
+  setState(success ? JobState::finished : JobState::failed);
   received = Clock::now();
   if(doneCb)
     doneCb();
+}
+
+void Job::setSent() {
+  setState(JobState::sent);
+  sendCounter++;
+  sent = Clock::now();
 }

@@ -3,9 +3,10 @@ CXX=/usr/bin/g++
 SRC_DIR=src
 INC_DIR=include
 BUILD_DIR=build
+TESTS_DIR=tests
 FPGA_LIB_DIR=lib/mlfpga
 
-CFLAGS=-g -Wall -std=c++11
+CFLAGS=-g -Wall -pthread -std=c++11
 LFLAGS=-shared -Wl,--no-as-needed,-Map=$(BUILD_DIR)/project.map
 
 
@@ -18,7 +19,11 @@ OBJS=$(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 FPGA_LIB_SRCS=$(wildcard $(FPGA_LIB_DIR)/$(SRC_DIR)/*.cpp)
 FPGA_LIB_OBJS=$(patsubst $(FPGA_LIB_DIR)/$(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(FPGA_LIB_SRCS))
 
+TESTS_SRCS=$(wildcard $(TESTS_DIR)/*.cpp)
+FPGA_LIB_TESTS_SRCS=$(wildcard $(FPGA_LIB_DIR)/$(TESTS_DIR)/*.cpp)
+
 EXECUTABLE=op_lib.so
+TEST_EXEC=test
 
 all: config $(BUILD_DIR)/$(EXECUTABLE)
 
@@ -34,7 +39,12 @@ $(OBJS): $(BUILD_DIR)/%.o : $(SRC_DIR)/%.cpp $(INC_DIR)/%.hpp
 $(FPGA_LIB_OBJS): $(BUILD_DIR)/%.o : $(FPGA_LIB_DIR)/$(SRC_DIR)/%.cpp $(FPGA_LIB_DIR)/$(INC_DIR)/%.hpp
 	$(CXX) $(CFLAGS) -fPIC -c -I$(FPGA_LIB_DIR)/$(INC_DIR) -o $@ $<
 
-tf_cflags:
+test: config $(BUILD_DIR)/$(EXECUTABLE) $(BUILD_DIR)/$(TEST_EXEC)
+
+$(BUILD_DIR)/$(TEST_EXEC): $(TESTS_SRCS) $(FPGA_LIB_OBJS)
+	$(CXX) $(CFLAGS) -I$(FPGA_LIB_DIR)/$(INC_DIR) -o $@ $^
+
+
 
 clean:
-	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/$(EXECUTABLE)
+	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/$(EXECUTABLE) $(BUILD_DIR)/$(TEST_EXEC)
