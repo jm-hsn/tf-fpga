@@ -1,10 +1,11 @@
 #include "worker.hpp"
 
-Worker::Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas) {
+Worker::Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas, Module mod, size_t numberOfJobs) : 
+jobList(std::piecewise_construct, std::make_tuple(), std::make_tuple(new JobList(mod, numberOfJobs))) {
   fpgaVector = fpgas;
 }
 Worker::~Worker() {
-  hasJobList.notify_all();
+  running = false;
 }
 
 void Worker::startAsync() {
@@ -14,77 +15,80 @@ void Worker::startSync() {
   threadMain();
 }
 
-int Worker::assignJobList(std::shared_ptr<JobList> &jobList) {
-  std::lock_guard<std::mutex> lk(currentJobList_m);
-  if(currentJobList != NULL)
-    return -1;
-  
-  currentJobList = jobList;
-  hasJobList.notify_all();
-
-  return 0;
+JobListContainer Worker::getJobList() {
+  return JobListContainer(jobList);
 }
 
 int Worker::threadMain() {
-  if(currentJobList == NULL)
-    return -1;
+  pthread_setname_np(pthread_self(), "mlfpga worker");
+  {
+    auto currentJobList = getJobList();
+    while(running) {
+      size_t remainingJobs = currentJobList->getJobCount();
+      Clock::time_point now = Clock::now(); 
+      commFPGA *fpga;
+      
+      for(size_t i=0; i<currentJobList->getJobCount(); i++) {
+        auto job = currentJobList->getJob(i);
+        switch(job->getState()) {
+          case JobState::initialized:
 
-  while(true) {
-    size_t remainingJobs = currentJobList->getJobCount();
-    Clock::time_point now = Clock::now(); 
-    commFPGA *fpga;
-    
-    for(size_t i=0; i<currentJobList->getJobCount(); i++) {
-      std::shared_ptr<Job> &job = currentJobList->getJob(i);
-      switch(job->getState()) {
-        case JobState::initialized:
-
-          break;
-        case JobState::ready:
-          sendJob(job);
-          break;
-        case JobState::sent:
-          if(std::chrono::duration_cast<microseconds>(now - job->getSent()).count() > 1000) {
-            fpga = (commFPGA*)job->getAssignedFPGA();
-            if(fpga != NULL) {
-              fpga->unassignJob(job);
+            break;
+          case JobState::ready:
+            fpga = findAvailableFPGA();
+            if(fpga == NULL) {
+            break;
             }
-            if(job->getSendCounter() < 5) {
-              job->setState(JobState::ready);
-              sendJob(job);
-            } else {
-              job->setState(JobState::failed);
-              job->setReceived(false);
+            if(fpga->assignJob(job) >= 0) {
+              job->setSent();
+              //printf("job %08X: assigned\n", job->getJobId());
             }
-          }
-          break;
-        case JobState::receiving:
+            break;
+          case JobState::sent:
+            if(now - job->getSent() > jobTimeout) {
+              fpga = (commFPGA*)job->getAssignedFPGA();
+              if(fpga != NULL) {
+                if(fpga->unassignJob(job) < 0)
+                  break;
+                //printf("job %08X: unassigned\n", job->getJobId());
+              }
+              if(job->getSendCounter() < retryCount) {
+                job->setState(JobState::ready);
+                fpga = findAvailableFPGA();
+                if(fpga == NULL) {
+                  break;
+                }
+                if(fpga->assignJob(job) >= 0) {
+                  job->setSent();
+                  //printf("job %08X: reassigned\n", job->getJobId());
+                }
+              } else {
+                job->setState(JobState::failed);
+                job->setReceived(false);
+              }
+            }
+            break;
+          case JobState::receiving:
 
-          break;
-        case JobState::finished:
-          remainingJobs--;
-          break;
-        case JobState::failed:
-          remainingJobs--;
-          break;
+            break;
+          case JobState::finished:
+            remainingJobs--;
+            break;
+          case JobState::failed:
+            remainingJobs--;
+            break;
+        }
       }
+      if(remainingJobs <= 0) {
+        break;
+      }
+      currentJobList->waitOne(jobTimeout);
     }
-    if(remainingJobs <= 0) {
-      break;
-    }
-    currentJobList->waitOne(microseconds(1000));
   }
+  
+  if(doneCb != NULL)
+    doneCb();
   return 0;
-}
-
-void Worker::sendJob(std::shared_ptr<Job> &job) {
-    commFPGA *fpga = findAvailableFPGA();
-    if(fpga == NULL) {
-      return;
-    }
-    if(fpga->assignJob(job) >= 0) {
-      job->setSent();
-    }
 }
 
 commFPGA* Worker::findAvailableFPGA() {
@@ -98,4 +102,12 @@ commFPGA* Worker::findAvailableFPGA() {
     }
   }
   return fpga;
+}
+
+void Worker::setDoneCallback(DoneCallback cb) {
+  doneCb = cb;
+}
+
+void Worker::waitUntilDone() {
+  jobList.second->waitAll();
 }

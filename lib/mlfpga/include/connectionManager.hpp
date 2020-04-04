@@ -40,11 +40,11 @@ class ConnectionManager {
 
     void start();
 
-    //send many Jobs and wait for all responses
-    int sendJobListSync(std::shared_ptr<JobList> &jobList);
+    Worker* createWorker(Module mod, size_t numberOfJobs);
+    Worker* getWorker(size_t i) const {return &(*workers.at(i));}
+    size_t getWorkerCount() const {return workers.size();}
 
-    //send many Jobs and call back
-    int sendJobListAsync(std::shared_ptr<JobList> &jobList);
+    void setSendDelay(microseconds us) {sendDelay = us;}
 
   private:
     std::vector<std::unique_ptr<commFPGA>> fpgas;
@@ -54,6 +54,7 @@ class ConnectionManager {
     std::future<void> sendResult;
 
     bool running = true;
+    microseconds sendDelay = microseconds(50);
 };
 
 #endif

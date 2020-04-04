@@ -30,11 +30,11 @@ void Job::calcCRC() {
 
 //checks CRC of recvBuf
 bool Job::checkCRC() {
-  uint32_t sum = getPreamble() + getJobId() + getModuleId();
-  for(uint_least32_t i=1; i<recvBuf.getWordCount()-1; i++) {
+  uint32_t sum = getJobId() + getModuleId();
+  for(uint_least32_t i=0; i<recvBuf.getWordCount(); i++) {
     sum += recvBuf.getWord(i);
   }
-  return recvBuf.getWord(recvBuf.getWordCount()-1) == -sum;
+  return sum == 0;
 }
 
 void Job::setDoneCallback(DoneCallback cb) {

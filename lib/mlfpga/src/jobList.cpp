@@ -28,15 +28,11 @@ void JobList::finishJob() {
   jobListDone.notify_all();
 }
 
-std::shared_ptr<Job>& JobList::getJob(size_t i) {
-  return jobs.at(i);
+JobContainer JobList::getJob(size_t i) {
+  return JobContainer(jobs.at(i));
 }
 
-std::shared_ptr<Job>& JobList::getNextJob() {
+JobContainer JobList::getNextJob() {
   nextJobIndex = (nextJobIndex+1) % jobCount;
-  return jobs.at(nextJobIndex);
-}
-
-void JobList::setDoneCallback(DoneCallback cb) {
-  doneCb = cb;
+  return JobContainer(jobs.at(nextJobIndex));
 }

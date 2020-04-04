@@ -29,10 +29,12 @@
 
 #define UDP_LEN (1500-28-448) // size of sent UDP packets in bytes
 #define UDP_MTU (1500) // size of recv UDP buffer in bytes
-#define JOB_COUNT (1024 * 4)
+#define JOB_COUNT (1024 * 4) // max size of jobList
 
-#define DEBUG_JOB_RESP
+#define MAX_JOB_LEN (256*256) // max word count of job
 
+//#define DEBUG_JOB_RESP
+//#define DEBUG_JOB_SEND
 
 typedef std::chrono::high_resolution_clock Clock;
 typedef std::chrono::milliseconds milliseconds;
@@ -58,8 +60,8 @@ class commFPGA {
 
     //called by worker thread
     
-    int assignJob(std::shared_ptr<Job> &job);
-    int unassignJob(std::shared_ptr<Job> &job);
+    int assignJob(JobContainer &job);
+    int unassignJob(JobContainer &job);
 
     size_t jobCount();
     
@@ -72,7 +74,7 @@ class commFPGA {
     void recvUDP();
     int parseRaw(uint32_t *buf, size_t bufLen);
     
-    std::unordered_map<uint32_t,std::shared_ptr<Job>>::iterator currentJob;
+    std::shared_ptr<Job> currentJob;
     RecvState recvState = RecvState::checkPreamble;
     size_t recvPayloadIndex = 0;
 
@@ -83,8 +85,9 @@ class commFPGA {
   private:
     //tx buffer for buffered send function
     uint32_t sendBuffer[MAX_JOB_LEN];
-    uint_least32_t sendBufferReadIndex = 0;
-    uint_least32_t sendBufferWriteIndex = 0;
+    int_least32_t sendBufferReadIndex = 0;
+    int_least32_t sendBufferAvailable = 0;
+    std::mutex sendLock;
 
     //list of pending responses
     std::unordered_map<uint32_t,std::shared_ptr<Job>> jobList;

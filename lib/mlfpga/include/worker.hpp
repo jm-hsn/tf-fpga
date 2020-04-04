@@ -11,28 +11,34 @@
 
 class Worker {
   public:
-    Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas);
+    Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas, Module mod, size_t numberOfJobs);
     ~Worker();
 
     void startAsync();
     void startSync();
     
-    int assignJobList(std::shared_ptr<JobList> &jobList);
+    JobListContainer getJobList();
+
+    void setJobTimeout(microseconds us) {jobTimeout = us;}
+    void setRetryCount(size_t n) {retryCount = n;}
+
+    void setDoneCallback(DoneCallback cb);
+    void waitUntilDone();
 
   private:
-    std::mutex currentJobList_m;
-    std::shared_ptr<JobList> currentJobList = NULL;
+    std::pair<std::mutex, std::shared_ptr<JobList>> jobList;
     std::vector<std::unique_ptr<commFPGA>> *fpgaVector;
 
     commFPGA* findAvailableFPGA();
-    void sendJob(std::shared_ptr<Job> &job);
     
-
     std::future<int> result;
     int threadMain();
 
-    std::condition_variable hasJobList;
-    void waitForJobList();
+    microseconds jobTimeout = microseconds(1000);
+    size_t retryCount = 10;
+
+    DoneCallback doneCb = NULL;
+    bool running = true;
 };
 
 #endif

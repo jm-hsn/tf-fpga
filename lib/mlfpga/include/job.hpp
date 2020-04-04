@@ -23,8 +23,6 @@ typedef std::function<void()> DoneCallback;
 
 #define PREAMBLE (0xE1E4C312)
 
-#define MAX_JOB_LEN (256*256)
-
 enum class JobState {
   initialized,  //Job was created
   ready,        //Job is ready to be sent
@@ -44,12 +42,14 @@ class WordBuffer {
     uint32_t* getWordAddr() const {return words;}
 
     uint8_t getByte(size_t i) const {return bytes[i];}
-    uint8_t getWord(size_t i) const {return words[i];}
+    void setByte(size_t i, uint32_t v) const {bytes[i] = v;}
+    uint32_t getWord(size_t i) const {return words[i];}
+    void setWord(size_t i, uint32_t v) const {words[i] = v;}
 
     size_t getWordCount() const {return wordCount;}
     size_t getByteCount() const {return wordCount*4;}
 
-  protected:
+  private:
       size_t wordCount;
       union {
         uint8_t *bytes;
@@ -57,26 +57,25 @@ class WordBuffer {
       };
 };
 
-//data structure that is sent over the network
+//wrapper for data structure that is sent over the network
 class JobData : public WordBuffer {
   public:
     JobData(uint payloadLength);
 
-    uint32_t getPreamble() const {return words[0];}
-    void setPreamble(uint32_t v) const {words[0] = v;}
+    uint32_t getPreamble() const {return getWord(0);}
+    void setPreamble(uint32_t v) const {setWord(0, v);}
 
-    uint32_t getJobId() const {return words[1];}
-    void setJobId(uint32_t v) const {words[1] = v;}
+    uint32_t getJobId() const {return getWord(1);}
+    void setJobId(uint32_t v) const {setWord(1, v);}
 
-    uint32_t getModuleId() const {return words[2];}
-    void setModuleId(uint32_t v) const {words[2] = v;}
+    uint32_t getModuleId() const {return getWord(2);}
+    void setModuleId(uint32_t v) const {setWord(2, v);}
 
-    uint32_t getPayload(size_t i) const {return words[i+3];}
-    void setPayload(size_t i, uint32_t v) const {words[i+3] = v;}
+    uint32_t getPayload(size_t i) const {return getWord(i+3);}
+    void setPayload(size_t i, uint32_t v) const {setWord(i+3, v);}
 
-    uint32_t getCRC() const {return words[wordCount-1];}
-    void setCRC(uint32_t v) const {words[wordCount-1] = v;}
-
+    uint32_t getCRC() const {return getWord(getWordCount()-1);}
+    void setCRC(uint32_t v) const {setWord(getWordCount()-1, v);}
 };
 
 //entity to track a single Job
@@ -86,15 +85,8 @@ class Job : public JobData {
 
     uint32_t tag = 0;
 
-    //locks state
-    std::mutex stateMutex;
-    //locks sendBuf
-    std::mutex sendMutex;
-    //locks recvBuf, recvWordIndex
-    std::mutex recvMutex;
-
     uint32_t getResponsePayload(size_t i) const {return recvBuf.getWord(i);}
-    void setResponsePayload(size_t i, uint32_t v) const {recvBuf.getWordAddr()[i] = v;}
+    void setResponsePayload(size_t i, uint32_t v) const {recvBuf.setWord(i, v);}
     uint32_t* getResponseAddr() const {return recvBuf.getWordAddr();}
     size_t getResponseBufferWordCount() const {return recvBuf.getWordCount();}
 
@@ -117,7 +109,9 @@ class Job : public JobData {
 
     size_t getSendCounter() const {return sendCounter;}
 
+    std::mutex jobLock;
   private:
+    
     //only payload and CRC of response
     WordBuffer recvBuf;
     DoneCallback doneCb = NULL;
@@ -129,6 +123,21 @@ class Job : public JobData {
     void *assignedFPGA = NULL;
     size_t sendCounter = 0;
 
+};
+
+//thread safe Job container
+class JobContainer {
+  public:
+    JobContainer(std::shared_ptr<Job> &p) : job(p), lock(p->jobLock) {
+
+    };
+    Job * operator->()const { return job.get(); }
+    Job & operator*() const { return *job; }
+
+    std::shared_ptr<Job>& sharedPtr() {return job;}
+  private:
+    std::shared_ptr<Job> job;
+    std::unique_lock<std::mutex> lock;
 };
 
 #endif
