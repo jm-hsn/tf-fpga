@@ -32,10 +32,10 @@ void commFPGA::recvUDP() {
   while(running) {
     int result = 0;
 
-    uint32_t buf[UDP_MTU/4];
+    uint32_t buf[UDP_MTU/4+1];
 
     uint slen = sizeof(addrDest);
-    result = recvfrom(sock, (uint8_t*)buf, UDP_MTU/4, 0, (sockaddr*)&addrDest, &slen);
+    result = recvfrom(sock, (uint8_t*)buf, UDP_MTU, 0, (sockaddr*)&addrDest, &slen);
     if(result == -1)
       continue;
 
@@ -56,7 +56,7 @@ void commFPGA::recvUDP() {
   }
 }
 
-int commFPGA::parseRaw(uint32_t *buf, size_t bufLen) {
+int commFPGA::parseRaw(uint32_t *buf, int_least32_t bufLen) {
   
   std::unordered_map<uint32_t,std::shared_ptr<Job>>::iterator jobIt;
   JobContainer *jobLocked = NULL;
@@ -228,17 +228,25 @@ int commFPGA::assignJob(JobContainer &job) {
   if(jobList.size() >= JOB_COUNT)
     return -1;
 
-  std::lock_guard<std::mutex> slk(sendLock);
   
   uint_least32_t free = MAX_JOB_LEN - sendBufferAvailable;
+  uint_least32_t sendBufferWriteIndex;
+
   if(free < job->getWordCount())
     return -1;
+  {
+    std::lock_guard<std::mutex> slk(sendLock);
 
-  jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job.sharedPtr()));
-  job->setAssignedFPGA(this);
+    free = MAX_JOB_LEN - sendBufferAvailable;
+    if(free < job->getWordCount())
+      return -1;
 
-  uint_least32_t sendBufferWriteIndex = sendBufferReadIndex + sendBufferAvailable + 1;
+    jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job.sharedPtr()));
+    job->setAssignedFPGA(this);
 
+    sendBufferWriteIndex = sendBufferReadIndex + sendBufferAvailable;
+    sendBufferAvailable += job->getWordCount();
+  }
   for(uint_least32_t i=0; i<job->getWordCount(); i++) {
     sendBuffer[(sendBufferWriteIndex + i) % MAX_JOB_LEN] = __builtin_bswap32(job->getWord(i));
   }
@@ -248,7 +256,6 @@ int commFPGA::assignJob(JobContainer &job) {
     printf("%u: %08X    ", (sendBufferWriteIndex + i) % MAX_JOB_LEN, job->getWord(i));
   printf("\n");
   #endif
-  sendBufferAvailable += job->getWordCount();
 
   return 0;
 }

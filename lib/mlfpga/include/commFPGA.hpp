@@ -72,7 +72,7 @@ class commFPGA {
     void start();
     //called by recv thread
     void recvUDP();
-    int parseRaw(uint32_t *buf, size_t bufLen);
+    int parseRaw(uint32_t *buf, int_least32_t bufLen);
     
     std::shared_ptr<Job> currentJob;
     RecvState recvState = RecvState::checkPreamble;
