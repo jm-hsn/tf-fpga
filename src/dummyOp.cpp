@@ -7,6 +7,7 @@ namespace tf_lib {
   };
 
   void DummyOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
+    connectionManager.startFromTensorflow();
     // Input tensor is of the following dimensions:
     // [ batch, in_rows, in_cols, in_depth ]
     const Tensor& input = context->input(0);
@@ -27,17 +28,25 @@ namespace tf_lib {
     auto input_tensor = input.tensor<int32, 1>();
     auto output_tensor = output->tensor<int32, 1>();
 
-    auto worker = connectionManager.createWorker(Module::dummyModule, 1);
+    auto worker = connectionManager.createWorker(Module::dummyModule);
+    worker->setJobTimeout(milliseconds(100));
+    worker->setRetryCount(10);
     {
-      auto jobs = worker->getJobList();
-      jobs->getJob(0)->setPayload(0, input_tensor(0));
+      auto job = worker->getJobList()->getJob(0);
+
+      for(size_t i=0; i<job->getPayloadSize(); i++) {
+        job->setPayload(i, input_tensor(i));
+        job->setReady();
+      }
     }
     worker->setDoneCallback([output_tensor, worker, done]{
-      auto jobs = worker->getJobList();
-      output_tensor(0) = jobs->getJob(0)->getResponsePayload(0);
+      auto job = worker->getJobList()->getJob(0);
+      for(size_t i=0; i<job->getResponsePayloadSize(); i++) {
+        output_tensor(i) = job->getResponsePayload(i);
+      }
       done();
     });
 
-    worker->startSync();
+    worker->startAsync();
   }
 }

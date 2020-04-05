@@ -36,15 +36,18 @@ class ConnectionManager {
     ConnectionManager();
     ~ConnectionManager();
 
-    void addFPGA(const char* ip, const uint port, bool bindSelf=false);
+    void startFromTensorflow();
 
+    void addFPGA(const char* ip, const uint port, bool bindSelf=false);
     void start();
 
-    Worker* createWorker(Module mod, size_t numberOfJobs);
+    Worker* createWorker(Module mod, size_t numberOfJobs = 1);
     Worker* getWorker(size_t i) const {return &(*workers.at(i));}
     size_t getWorkerCount() const {return workers.size();}
 
     void setSendDelay(microseconds us) {sendDelay = us;}
+
+    bool isRunning() const {return running;}
 
   private:
     std::vector<std::unique_ptr<commFPGA>> fpgas;
@@ -53,7 +56,7 @@ class ConnectionManager {
     void sendThread();
     std::future<void> sendResult;
 
-    bool running = true;
+    bool running = false;
     microseconds sendDelay = microseconds(50);
 };
 

@@ -32,7 +32,7 @@ int Worker::threadMain() {
         auto job = currentJobList->getJob(i);
         switch(job->getState()) {
           case JobState::initialized:
-
+            throw("worker can't send job that is not ready");
             break;
           case JobState::ready:
             fpga = findAvailableFPGA();

@@ -18,7 +18,24 @@ Worker* ConnectionManager::createWorker(Module mod, size_t numberOfJobs) {
   return w;
 }
 
+void ConnectionManager::startFromTensorflow() {
+  if(isRunning())
+    return;
+
+  addFPGA("localhost", 1234);
+  start();
+
+  printf("fpga server started\n");
+  /*
+  cm.addFPGA("192.168.88.32", 1234);
+  cm.addFPGA("192.168.88.33", 1234);
+  cm.addFPGA("192.168.88.34", 1234);
+  cm.addFPGA("192.168.88.35", 1234);
+  */
+}
+
 void ConnectionManager::start() {
+  running = true;
   sendResult = std::async(std::launch::async, &ConnectionManager::sendThread, this);
 }
 

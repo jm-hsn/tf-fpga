@@ -129,23 +129,21 @@ namespace tf_lib {
 
   REGISTER_KERNEL_BUILDER(Name("MyDummy").Device(DEVICE_CPU), DummyOp);
 
+  REGISTER_OP("MyDummyBig")
+    .Input("input: int32")
+    .Output("output: int32")
+    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+      c->set_output(0, c->input(0));
+      return Status::OK();
+    });
+  ;
+
+  REGISTER_KERNEL_BUILDER(Name("MyDummyBig").Device(DEVICE_CPU), DummyBigOp);
+
   ConnectionManager connectionManager;
 
   void __attribute__ ((constructor)) init(void) {
-    printf("starting fpga server\n");
-      
-    connectionManager.addFPGA("localhost", 1234);
-    connectionManager.addFPGA("localhost", 1234);
-    connectionManager.addFPGA("localhost", 1234);
-    connectionManager.addFPGA("localhost", 1234);
-    connectionManager.addFPGA("localhost", 1234);
-
-    /*
-    connectionManager.addFPGA("192.168.88.32", 1234);
-    connectionManager.addFPGA("192.168.88.33", 1234);
-    connectionManager.addFPGA("192.168.88.34", 1234);
-    connectionManager.addFPGA("192.168.88.35", 1234);
-    */
+    printf("fpga llibrary loaded\n");
   }
 
 }

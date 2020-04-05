@@ -28,7 +28,6 @@ namespace tf_lib {
       void ComputeAsync(OpKernelContext* context, DoneCallback done) override;
 
     private:
-      void fpgaCall(const Tensor *input, Tensor *output, DoneCallback done);
 
       const int dataLength = 4;
       int tagCounter = 0;

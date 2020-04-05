@@ -14,6 +14,7 @@ namespace tf_lib {
   };
 
   void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
+    connectionManager.startFromTensorflow();
     // Input tensor is of the following dimensions:
     // [ batch, in_rows, in_cols, in_depth ]
     const Tensor& input = context->input(0);
@@ -67,13 +68,25 @@ namespace tf_lib {
                 job->setPayload(x*outputSize + y, input_tensor(sample, x, y, channel));
               }
             }
+            job->setReady();
           }
         }
       }
     }
-    worker->setDoneCallback([output_tensor, worker, done]{
+    worker->setDoneCallback([output_tensor, worker, done, batchSize, channels, filters, this]{
       auto jobs = worker->getJobList();
-      output_tensor(0) = jobs->getJob(0)->getResponsePayload(0);
+      for(int sample=0; sample<batchSize; sample++) {
+        for(int channel=0; channel<channels; channel++) {
+          for(int filter=0; filter<filters; filter++) {
+            auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
+            for(int x=0; x<outputSize; x++) {
+              for(int y=0; y<outputSize; y++) {
+                output_tensor(sample, x, y, channel) = job->getPayload(x*outputSize + y);
+              }
+            }
+          }
+        }
+      }
       done();
     });
 

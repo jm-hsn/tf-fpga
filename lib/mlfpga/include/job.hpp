@@ -74,6 +74,8 @@ class JobData : public WordBuffer {
     uint32_t getPayload(size_t i) const {return getWord(i+3);}
     void setPayload(size_t i, uint32_t v) const {setWord(i+3, v);}
 
+    size_t getPayloadSize() const {return getWordCount()-4;}
+
     uint32_t getCRC() const {return getWord(getWordCount()-1);}
     void setCRC(uint32_t v) const {setWord(getWordCount()-1, v);}
 };
@@ -87,6 +89,7 @@ class Job : public JobData {
 
     uint32_t getResponsePayload(size_t i) const {return recvBuf.getWord(i);}
     void setResponsePayload(size_t i, uint32_t v) const {recvBuf.setWord(i, v);}
+    size_t getResponsePayloadSize() const {return recvBuf.getWordCount()-1;}
     uint32_t* getResponseAddr() const {return recvBuf.getWordAddr();}
     size_t getResponseBufferWordCount() const {return recvBuf.getWordCount();}
 

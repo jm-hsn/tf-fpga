@@ -10,6 +10,7 @@
 
 #include "conv2D.hpp"
 #include "dummyOp.hpp"
+#include "dummyBigOp.hpp"
 #include "../lib/mlfpga/include/connectionManager.hpp"
 
 namespace tf_lib {
