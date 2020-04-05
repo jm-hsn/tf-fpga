@@ -29,9 +29,9 @@
 
 #define UDP_LEN (1500-28-448) // size of sent UDP packets in bytes
 #define UDP_MTU (1500) // size of recv UDP buffer in bytes
-#define JOB_COUNT (1024 * 4) // max size of jobList
+#define JOB_COUNT (1024 * 4 * 10) // max size of jobList
 
-#define MAX_JOB_LEN (256*256) // max word count of job
+#define MAX_JOB_LEN (256*256*16) // max word count of job
 
 //#define DEBUG_JOB_RESP
 //#define DEBUG_JOB_SEND
@@ -84,7 +84,7 @@ class commFPGA {
 
   private:
     //tx buffer for buffered send function
-    uint32_t sendBuffer[MAX_JOB_LEN];
+    uint32_t *sendBuffer;
     int_least32_t sendBufferReadIndex = 0;
     int_least32_t sendBufferAvailable = 0;
     std::mutex sendLock;
@@ -92,8 +92,6 @@ class commFPGA {
     //list of pending responses
     std::unordered_map<uint32_t,std::shared_ptr<Job>> jobList;
     std::mutex jobLock;
-
-    //listener for a single FPGA
     
     sockaddr_storage addrDest = {};
     

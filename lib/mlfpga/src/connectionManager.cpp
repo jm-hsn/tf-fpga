@@ -44,9 +44,9 @@ void ConnectionManager::sendThread() {
   while(running) {
     Clock::time_point start = Clock::now();
     for(std::vector<std::unique_ptr<commFPGA>>::iterator it=fpgas.begin(); it!=fpgas.end(); it++) {
-      it->get()->sendFromBuffer();
+      auto fpga = it->get();
+      fpga->sendFromBuffer();
     }
-    //printf("%8d %8d\n", fpgas[0].sendBufferWriteIndex, fpgas[0].sendBufferReadIndex);
     auto elapsed = Clock::now() - start;
     if(elapsed < sendDelay)
       std::this_thread::sleep_for(sendDelay - elapsed);

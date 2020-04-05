@@ -29,59 +29,64 @@ int Worker::threadMain() {
       commFPGA *fpga;
       
       for(size_t i=0; i<currentJobList->getJobCount(); i++) {
-        auto job = currentJobList->getJob(i);
-        switch(job->getState()) {
-          case JobState::initialized:
-            throw("worker can't send job that is not ready");
-            break;
-          case JobState::ready:
-            fpga = findAvailableFPGA();
-            if(fpga == NULL) {
-            break;
-            }
-            if(fpga->assignJob(job) >= 0) {
-              job->setSent();
-              //printf("job %08X: assigned\n", job->getJobId());
-            }
-            break;
-          case JobState::sent:
-            if(now - job->getSent() > jobTimeout) {
-              fpga = (commFPGA*)job->getAssignedFPGA();
-              if(fpga != NULL) {
-                if(fpga->unassignJob(job) < 0)
-                  break;
-                //printf("job %08X: unassigned\n", job->getJobId());
+        {
+          auto job = currentJobList->getJob(i);
+          switch(job->getState()) {
+            case JobState::initialized:
+              throw("worker can't send job that is not ready");
+              break;
+            case JobState::ready:
+              fpga = findAvailableFPGA();
+              if(fpga == NULL) {
+                goto fullQueue;
+                break;
               }
-              if(job->getSendCounter() < retryCount) {
-                job->setState(JobState::ready);
-                fpga = findAvailableFPGA();
-                if(fpga == NULL) {
-                  break;
-                }
-                if(fpga->assignJob(job) >= 0) {
-                  job->setSent();
-                  //printf("job %08X: reassigned\n", job->getJobId());
-                }
-              } else {
-                job->setState(JobState::failed);
-                job->setReceived(false);
+              if(fpga->assignJob(job) >= 0) {
+                job->setSent();
+                //printf("job %08X: assigned\n", job->getJobId());
               }
-            }
-            break;
-          case JobState::receiving:
+              break;
+            case JobState::sent:
+              if(now - job->getSent() > jobTimeout) {
+                fpga = (commFPGA*)job->getAssignedFPGA();
+                if(fpga != NULL) {
+                  if(fpga->unassignJob(job) < 0)
+                    break;
+                  //printf("job %08X: unassigned\n", job->getJobId());
+                }
+                if(job->getSendCounter() < retryCount) {
+                  job->setState(JobState::ready);
+                  fpga = findAvailableFPGA();
+                  if(fpga == NULL) {
+                    goto fullQueue;
+                    break;
+                  }
+                  if(fpga->assignJob(job) >= 0) {
+                    job->setSent();
+                    //printf("job %08X: reassigned\n", job->getJobId());
+                  }
+                } else {
+                  job->setState(JobState::failed);
+                  job->setReceived(false);
+                }
+              }
+              break;
+            case JobState::receiving:
 
-            break;
-          case JobState::finished:
-            remainingJobs--;
-            break;
-          case JobState::failed:
-            remainingJobs--;
-            break;
+              break;
+            case JobState::finished:
+              remainingJobs--;
+              break;
+            case JobState::failed:
+              remainingJobs--;
+              break;
+          }
         }
       }
       if(remainingJobs <= 0) {
         break;
       }
+      fullQueue:
       currentJobList->waitOne(jobTimeout);
     }
   }

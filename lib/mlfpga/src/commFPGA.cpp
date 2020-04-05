@@ -151,6 +151,8 @@ commFPGA::commFPGA(const char *host, uint _port, bool bindSelf) {
   port = _port;
   strcpy(ip, host);
 
+  sendBuffer = new uint32_t[MAX_JOB_LEN];
+
   int err = 0;
 
   struct addrinfo hints, *res;
@@ -191,8 +193,8 @@ commFPGA::commFPGA(const char *host, uint _port, bool bindSelf) {
 
 }
 commFPGA::~commFPGA() {
-  //printf("%15s deleting job queue...\n", ip);
   running = false;
+  delete sendBuffer;
 }
 
 int commFPGA::sendRaw(uint8_t *buf, uint bufLen) {
@@ -235,7 +237,9 @@ int commFPGA::assignJob(JobContainer &job) {
   if(free < job->getWordCount())
     return -1;
   {
-    std::lock_guard<std::mutex> slk(sendLock);
+    std::unique_lock<std::mutex> slk(sendLock);
+    if(!slk.owns_lock())
+      return -1;
 
     free = MAX_JOB_LEN - sendBufferAvailable;
     if(free < job->getWordCount())
@@ -281,12 +285,12 @@ int commFPGA::unassignJob(JobContainer &job) {
 int commFPGA::sendFromBuffer() {
   std::lock_guard<std::mutex> lk(sendLock);
   int_least32_t avail = sendBufferAvailable + sendBufferReadIndex > MAX_JOB_LEN ? MAX_JOB_LEN - sendBufferReadIndex : sendBufferAvailable;
-  
+
   if(avail == 0)
     return -1;
 
-  if(avail*4 > UDP_LEN)
-    avail = UDP_LEN / 4;
+  if(avail > UDP_LEN/4)
+    avail = UDP_LEN/4;
 
   int rc = sendRaw((uint8_t*)&sendBuffer[sendBufferReadIndex], avail * 4);
 
@@ -300,7 +304,7 @@ int commFPGA::sendFromBuffer() {
   sendBufferReadIndex = (avail + sendBufferReadIndex) % MAX_JOB_LEN;
   sendBufferAvailable -= avail;
 
-  return rc;
+  return sendBufferAvailable;
 }
 
 size_t commFPGA::jobCount() {

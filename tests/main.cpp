@@ -7,9 +7,9 @@ size_t s=0, f=0, r=0;
 std::mutex statsLk;
 
 void work() {
-    auto worker = connectionManager.createWorker(Module::dummyBigModule, 10000);
+    auto worker = connectionManager.createWorker(Module::dummyBigModule, 1000);
 
-    worker->setJobTimeout(milliseconds(100));
+    worker->setJobTimeout(milliseconds(50));
     worker->setRetryCount(10);
     worker->setDoneCallback([worker](){
         auto jobs = worker->getJobList();
@@ -53,7 +53,7 @@ int main(void)
     connectionManager.addFPGA("192.168.1.32", 1234);
     connectionManager.addFPGA("192.168.1.32", 1234);
 
-    //connectionManager.setSendDelay(microseconds(0));
+    connectionManager.setSendDelay(microseconds(1));
 
     connectionManager.start();
 
