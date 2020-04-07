@@ -88,6 +88,7 @@ namespace tf_lib {
         }
       }
       done();
+      connectionManager.removeFinishedWorkers();
     });
 
     worker->startAsync();

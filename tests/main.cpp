@@ -9,7 +9,7 @@ std::mutex statsLk;
 void work() {
     auto worker = connectionManager.createWorker(Module::dummyBigModule, 1000);
 
-    worker->setJobTimeout(milliseconds(50));
+    worker->setJobTimeout(milliseconds(1000));
     worker->setRetryCount(10);
     worker->setDoneCallback([worker](){
         auto jobs = worker->getJobList();
@@ -53,15 +53,20 @@ int main(void)
     connectionManager.addFPGA("192.168.1.32", 1234);
     connectionManager.addFPGA("192.168.1.32", 1234);
 
-    connectionManager.setSendDelay(microseconds(1));
+    connectionManager.setSendDelay(microseconds(50));
 
     connectionManager.start();
 
-    for(int i=0; i<8; i++)
-        work();
+    int workNum = 100;
     
-    for(size_t i=0; i<connectionManager.getWorkerCount(); i++) {
-        connectionManager.getWorker(i)->waitUntilDone();
+    while(workNum > 0 || connectionManager.getWorkerCount() > 0) {
+        connectionManager.removeFinishedWorkers();
+        while(workNum > 0 && connectionManager.getWorkerCount() < 8) {
+            workNum--;
+            work();
+        }
+        printf("work: %2d   worker: %2lu\n", workNum, connectionManager.getWorkerCount());
+        std::this_thread::sleep_for(milliseconds(300));
     }
 
     std::unique_lock<std::mutex> lk(statsLk);

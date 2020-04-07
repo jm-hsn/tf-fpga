@@ -25,6 +25,8 @@ class Worker {
     void setDoneCallback(DoneCallback cb);
     void waitUntilDone();
 
+    bool isRunning() const {return running;}
+
   private:
     std::pair<std::mutex, std::shared_ptr<JobList>> jobList;
     std::vector<std::unique_ptr<commFPGA>> *fpgaVector;

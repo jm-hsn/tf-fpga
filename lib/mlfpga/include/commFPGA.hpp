@@ -31,7 +31,7 @@
 #define UDP_MTU (1500) // size of recv UDP buffer in bytes
 #define JOB_COUNT (1024 * 4 * 10) // max size of jobList
 
-#define MAX_JOB_LEN (256*256*16) // max word count of job
+#define MAX_JOB_LEN (256*256) // max word count of job
 
 //#define DEBUG_JOB_RESP
 //#define DEBUG_JOB_SEND

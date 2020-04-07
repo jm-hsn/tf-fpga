@@ -22,6 +22,7 @@ JobListContainer Worker::getJobList() {
 int Worker::threadMain() {
   pthread_setname_np(pthread_self(), "mlfpga worker");
   {
+    size_t lastI = 0;
     auto currentJobList = getJobList();
     while(running) {
       size_t remainingJobs = currentJobList->getJobCount();
@@ -30,7 +31,8 @@ int Worker::threadMain() {
       
       for(size_t i=0; i<currentJobList->getJobCount(); i++) {
         {
-          auto job = currentJobList->getJob(i);
+          size_t currentI = (lastI + i) % currentJobList->getJobCount();
+          auto job = currentJobList->getJob(currentI);
           switch(job->getState()) {
             case JobState::initialized:
               throw("worker can't send job that is not ready");
@@ -38,6 +40,7 @@ int Worker::threadMain() {
             case JobState::ready:
               fpga = findAvailableFPGA();
               if(fpga == NULL) {
+                lastI = currentI;
                 goto fullQueue;
                 break;
               }
@@ -58,6 +61,7 @@ int Worker::threadMain() {
                   job->setState(JobState::ready);
                   fpga = findAvailableFPGA();
                   if(fpga == NULL) {
+                    lastI = currentI;
                     goto fullQueue;
                     break;
                   }
@@ -93,13 +97,15 @@ int Worker::threadMain() {
   
   if(doneCb != NULL)
     doneCb();
+
+  running = false;
   return 0;
 }
 
 commFPGA* Worker::findAvailableFPGA() {
   uint_least32_t minCnt = JOB_COUNT-1;
   commFPGA *fpga = NULL;
-  for(std::vector<std::unique_ptr<commFPGA>>::iterator it=fpgaVector->begin(); it!=fpgaVector->end(); it++) {
+  for(auto it=fpgaVector->begin(); it!=fpgaVector->end(); it++) {
     uint_least32_t cnt = it->get()->jobCount();
     if(cnt < minCnt) {
       minCnt = cnt;
@@ -114,5 +120,7 @@ void Worker::setDoneCallback(DoneCallback cb) {
 }
 
 void Worker::waitUntilDone() {
+  if(!running)
+    return;
   jobList.second->waitAll();
 }

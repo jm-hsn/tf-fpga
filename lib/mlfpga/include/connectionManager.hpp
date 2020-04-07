@@ -8,6 +8,7 @@
 #include <future>
 #include <mutex>
 #include <condition_variable>
+#include <algorithm>
 
 #include "commFPGA.hpp"
 #include "worker.hpp"
@@ -44,6 +45,7 @@ class ConnectionManager {
     Worker* createWorker(Module mod, size_t numberOfJobs = 1);
     Worker* getWorker(size_t i) const {return &(*workers.at(i));}
     size_t getWorkerCount() const {return workers.size();}
+    void removeFinishedWorkers();
 
     void setSendDelay(microseconds us) {sendDelay = us;}
 

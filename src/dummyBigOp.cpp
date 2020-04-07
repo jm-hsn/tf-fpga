@@ -43,6 +43,7 @@ namespace tf_lib {
         output_tensor(i) = job->getResponsePayload(i);
       }
       done();
+      connectionManager.removeFinishedWorkers();
     });
 
     worker->startAsync();

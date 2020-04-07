@@ -230,27 +230,19 @@ int commFPGA::assignJob(JobContainer &job) {
   if(jobList.size() >= JOB_COUNT)
     return -1;
 
-  
+  std::lock_guard<std::mutex> slk(sendLock);
+
   uint_least32_t free = MAX_JOB_LEN - sendBufferAvailable;
-  uint_least32_t sendBufferWriteIndex;
 
   if(free < job->getWordCount())
     return -1;
-  {
-    std::unique_lock<std::mutex> slk(sendLock);
-    if(!slk.owns_lock())
-      return -1;
 
-    free = MAX_JOB_LEN - sendBufferAvailable;
-    if(free < job->getWordCount())
-      return -1;
+  jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job.sharedPtr()));
+  job->setAssignedFPGA(this);
 
-    jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job.sharedPtr()));
-    job->setAssignedFPGA(this);
-
-    sendBufferWriteIndex = sendBufferReadIndex + sendBufferAvailable;
-    sendBufferAvailable += job->getWordCount();
-  }
+  uint_least32_t sendBufferWriteIndex = sendBufferReadIndex + sendBufferAvailable;
+  sendBufferAvailable += job->getWordCount();
+  
   for(uint_least32_t i=0; i<job->getWordCount(); i++) {
     sendBuffer[(sendBufferWriteIndex + i) % MAX_JOB_LEN] = __builtin_bswap32(job->getWord(i));
   }
@@ -292,7 +284,9 @@ int commFPGA::sendFromBuffer() {
   if(avail > UDP_LEN/4)
     avail = UDP_LEN/4;
 
-  int rc = sendRaw((uint8_t*)&sendBuffer[sendBufferReadIndex], avail * 4);
+  sendRaw((uint8_t*)&sendBuffer[sendBufferReadIndex], avail * 4);
+
+  //printf("%8d %4d %8lu\n", sendBufferAvailable, avail, sendBufferReadIndex);
 
   #ifdef DEBUG_JOB_SEND
   printf("send ");

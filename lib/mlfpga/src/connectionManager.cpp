@@ -18,6 +18,18 @@ Worker* ConnectionManager::createWorker(Module mod, size_t numberOfJobs) {
   return w;
 }
 
+void ConnectionManager::removeFinishedWorkers() {
+  workers.erase(
+    std::remove_if(
+      workers.begin(),
+      workers.end(),
+      [&] (std::unique_ptr<Worker> const& p) {
+        return !p.get()->isRunning();
+      }),
+    workers.end()
+  );
+}
+
 void ConnectionManager::startFromTensorflow() {
   if(isRunning())
     return;
