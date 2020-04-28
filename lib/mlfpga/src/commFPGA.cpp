@@ -225,17 +225,17 @@ int commFPGA::assignJob(JobContainer &job) {
 
   std::unique_lock<std::mutex> lk(jobLock, std::try_to_lock);
   if(!lk.owns_lock())
-    return -1;
+    return -2;
   
   if(jobList.size() >= JOB_COUNT)
-    return -1;
-
+    return -3;
+  
   std::lock_guard<std::mutex> slk(sendLock);
 
   uint_least32_t free = MAX_JOB_LEN - sendBufferAvailable;
 
   if(free < job->getWordCount())
-    return -1;
+    return -4;
 
   jobList.insert(std::pair<uint32_t,std::shared_ptr<Job>>(job->getJobId(), job.sharedPtr()));
   job->setAssignedFPGA(this);
@@ -253,7 +253,7 @@ int commFPGA::assignJob(JobContainer &job) {
   printf("\n");
   #endif
 
-  return 0;
+  return job->getWordCount();
 }
 int commFPGA::unassignJob(JobContainer &job) {
   if(job->getAssignedFPGA() != this)
@@ -261,7 +261,7 @@ int commFPGA::unassignJob(JobContainer &job) {
 
   std::unique_lock<std::mutex> lk(jobLock, std::try_to_lock);
   if(!lk.owns_lock())
-    return -1;
+    return -2;
 
   if(job->getState() == JobState::receiving) {
     currentJob = NULL;

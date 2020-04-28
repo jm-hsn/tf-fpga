@@ -34,16 +34,13 @@ void ConnectionManager::startFromTensorflow() {
   if(isRunning())
     return;
 
-  addFPGA("localhost", 1234);
+  addFPGA("192.168.1.33", 1234);
+  addFPGA("192.168.1.34", 1234);
+  addFPGA("192.168.1.35", 1234);
+
   start();
 
   printf("fpga server started\n");
-  /*
-  cm.addFPGA("192.168.88.32", 1234);
-  cm.addFPGA("192.168.88.33", 1234);
-  cm.addFPGA("192.168.88.34", 1234);
-  cm.addFPGA("192.168.88.35", 1234);
-  */
 }
 
 void ConnectionManager::start() {
@@ -53,13 +50,14 @@ void ConnectionManager::start() {
 
 void ConnectionManager::sendThread() {
   pthread_setname_np(pthread_self(), "mlfpga send");
+  std::chrono::steady_clock::time_point start;
   while(running) {
-    Clock::time_point start = Clock::now();
+    start = std::chrono::steady_clock::now();
     for(std::vector<std::unique_ptr<commFPGA>>::iterator it=fpgas.begin(); it!=fpgas.end(); it++) {
       auto fpga = it->get();
       fpga->sendFromBuffer();
     }
-    auto elapsed = Clock::now() - start;
+    auto elapsed =std::chrono::steady_clock::now() - start;
     if(elapsed < sendDelay)
       std::this_thread::sleep_for(sendDelay - elapsed);
   }

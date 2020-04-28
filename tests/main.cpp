@@ -3,11 +3,13 @@
 
 ConnectionManager connectionManager;
 
+Module mod = Module::dummyBigModule;
+
 size_t s=0, f=0, r=0;
 std::mutex statsLk;
 
 void work() {
-    auto worker = connectionManager.createWorker(Module::dummyBigModule, 1000);
+    auto worker = connectionManager.createWorker(mod, 1000);
 
     worker->setJobTimeout(milliseconds(1000));
     worker->setRetryCount(10);
@@ -48,28 +50,26 @@ int main(void)
     puts("This is a shared library test...");
 
     
-    connectionManager.addFPGA("192.168.1.32", 1234);
-    connectionManager.addFPGA("192.168.1.32", 1234);
-    connectionManager.addFPGA("192.168.1.32", 1234);
-    connectionManager.addFPGA("192.168.1.32", 1234);
+    connectionManager.addFPGA("192.168.1.33", 1234);
+    connectionManager.addFPGA("192.168.1.34", 1234);
+    connectionManager.addFPGA("192.168.1.35", 1234);
 
     connectionManager.setSendDelay(microseconds(50));
 
     connectionManager.start();
 
-    int workNum = 100;
+    int workNum = 10000;
+    int n=1;
     
     while(workNum > 0 || connectionManager.getWorkerCount() > 0) {
+        std::this_thread::sleep_for(milliseconds(300));
         connectionManager.removeFinishedWorkers();
         while(workNum > 0 && connectionManager.getWorkerCount() < 8) {
             workNum--;
             work();
         }
-        printf("work: %2d   worker: %2lu\n", workNum, connectionManager.getWorkerCount());
-        std::this_thread::sleep_for(milliseconds(300));
+        std::unique_lock<std::mutex> lk(statsLk);
+        printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu  %4lu MBit/s\n", workNum, connectionManager.getWorkerCount(), f, s, r, s*(moduleSendPayloadLength[mod]+4)*4*10*8/1024/1024/3/(n++));
     }
-
-    std::unique_lock<std::mutex> lk(statsLk);
-    printf("failed: %lu, successful: %lu, retries: %lu\n", f, s, r);
     return 0;
 }

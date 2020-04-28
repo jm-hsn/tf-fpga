@@ -57,6 +57,8 @@ namespace tf_lib {
 
     auto worker = connectionManager.createWorker(Module::conv2D_5x5_Module, batchSize * channels * filters);
     {
+      worker->setJobTimeout(milliseconds(300));
+      worker->setRetryCount(10);
       auto jobs = worker->getJobList();
 
       for(int sample=0; sample<batchSize; sample++) {
@@ -81,7 +83,7 @@ namespace tf_lib {
             auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                output_tensor(sample, x, y, channel) = job->getPayload(x*outputSize + y);
+                output_tensor(sample, x, y, channel) = job->getResponsePayload(x*outputSize + y);
               }
             }
           }
@@ -90,7 +92,6 @@ namespace tf_lib {
       done();
       connectionManager.removeFinishedWorkers();
     });
-
     worker->startAsync();
 
   }

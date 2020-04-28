@@ -35,7 +35,7 @@ namespace tf_lib {
       int instance = -1;
       int delay = 1000;
 
-      int outputSize = 28;
+      
       int tagCounter = 0;
 
       int width = 224;
@@ -43,6 +43,7 @@ namespace tf_lib {
       int border = kernel/2;
       int sizeWithBorder = width + 2*border;
       int pixels = sizeWithBorder * sizeWithBorder;
+      int outputSize = sizeWithBorder;
 
 
     //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);

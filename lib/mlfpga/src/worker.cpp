@@ -1,5 +1,7 @@
 #include "worker.hpp"
 
+//#define DEBUG_WORKER
+
 Worker::Worker(std::vector<std::unique_ptr<commFPGA>> *fpgas, Module mod, size_t numberOfJobs) : 
 jobList(std::piecewise_construct, std::make_tuple(), std::make_tuple(new JobList(mod, numberOfJobs))) {
   fpgaVector = fpgas;
@@ -24,9 +26,14 @@ int Worker::threadMain() {
   {
     size_t lastI = 0;
     auto currentJobList = getJobList();
+    int rc;
     while(running) {
       size_t remainingJobs = currentJobList->getJobCount();
-      Clock::time_point now = Clock::now(); 
+      Clock::time_point now = Clock::now();
+      #ifdef DEBUG_WORKER
+        Clock::time_point then;
+        size_t sentBytes = 0;
+      #endif
       commFPGA *fpga;
       
       for(size_t i=0; i<currentJobList->getJobCount(); i++) {
@@ -44,9 +51,17 @@ int Worker::threadMain() {
                 goto fullQueue;
                 break;
               }
-              if(fpga->assignJob(job) >= 0) {
+              rc = fpga->assignJob(job);
+              //printf("rc: %4d i: %4lu\n", rc, i);
+              if(rc >= 0) {
                 job->setSent();
-                //printf("job %08X: assigned\n", job->getJobId());
+                #ifdef DEBUG_WORKER
+                  sentBytes += job->getByteCount();
+                  printf("job %08X: \x1b[32massigned\x1b[0m   no.: %3lu\n", job->getJobId(), currentI);
+                #endif
+              } else if(rc == -4) {
+                lastI = currentI;
+                goto fullQueue;
               }
               break;
             case JobState::sent:
@@ -55,7 +70,9 @@ int Worker::threadMain() {
                 if(fpga != NULL) {
                   if(fpga->unassignJob(job) < 0)
                     break;
-                  //printf("job %08X: unassigned\n", job->getJobId());
+                  #ifdef DEBUG_WORKER
+                    printf("job %08X: \x1b[31munassigned\x1b[0m no.: %3lu\n", job->getJobId(), currentI);
+                  #endif
                 }
                 if(job->getSendCounter() < retryCount) {
                   job->setState(JobState::ready);
@@ -67,7 +84,10 @@ int Worker::threadMain() {
                   }
                   if(fpga->assignJob(job) >= 0) {
                     job->setSent();
-                    //printf("job %08X: reassigned\n", job->getJobId());
+                    #ifdef DEBUG_WORKER
+                      sentBytes += job->getByteCount();
+                      printf("job %08X: \x1b[33mreassigned\x1b[0m no.: %3lu\n", job->getJobId(), currentI);
+                    #endif
                   }
                 } else {
                   job->setState(JobState::failed);
@@ -92,6 +112,10 @@ int Worker::threadMain() {
       }
       fullQueue:
       currentJobList->waitOne(jobTimeout);
+      #ifdef DEBUG_WORKER
+        then = Clock::now();
+        printf("loop: %3ld ms sent: %5lu kB remaining: %lu\n", std::chrono::duration_cast<milliseconds>(then - now).count(), sentBytes/1024, remainingJobs);
+      #endif
     }
   }
   

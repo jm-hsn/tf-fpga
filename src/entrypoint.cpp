@@ -143,7 +143,7 @@ namespace tf_lib {
   ConnectionManager connectionManager;
 
   void __attribute__ ((constructor)) init(void) {
-    printf("fpga llibrary loaded\n");
+    printf("fpga library loaded\n");
   }
 
 }
