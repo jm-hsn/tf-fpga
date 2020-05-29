@@ -39,7 +39,7 @@ print(x_test.shape[0], 'test samples')
 y_train = to_categorical(y_train, num_classes)
 y_test = to_categorical(y_test, num_classes)
 
-a = layers.Input(dtype=tf.int32, shape=(28, 28, 1))
+a = layers.Input(shape=(28, 28, 1))
 b = Conv2DFPGA(2)(a)
 c = Conv2DFPGA(1)(a)
 d = Conv2DFPGA(1)(b)

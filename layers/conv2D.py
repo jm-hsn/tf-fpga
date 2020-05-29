@@ -35,6 +35,4 @@ class Conv2D(layers.Layer):
 
   def call(self, inputs):
 
-    #out = tf.Tensor(tf.int32, shape=inputs.shape)
-    intKernel = tf.cast(self.kernel, dtype=tf.int32)
-    return load_op.op_lib.MyConv2D(input=inputs, filter=intKernel, delay=0*self.filters)
+    return load_op.op_lib.MyConv2D(input=inputs, filter=self.kernel)

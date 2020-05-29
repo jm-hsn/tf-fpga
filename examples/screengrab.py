@@ -22,14 +22,14 @@ width, height = 228, 228
 sct = mss()
 stop = 0
 
-a = layers.Input(dtype=tf.int32, shape=(width, height, 3))
+a = layers.Input(dtype=tf.float32, shape=(width, height, 3))
 z = Conv2DFPGA(1)(a)
 model = models.Model(inputs=a, outputs=z)
 
 
-#model.compile(loss=tf.keras.losses.categorical_crossentropy,
-#              optimizer=tf.keras.optimizers.Adadelta(),
-#              metrics=['accuracy'])
+model.compile(loss=tf.keras.losses.categorical_crossentropy,
+              optimizer=tf.keras.optimizers.Adadelta(),
+              metrics=['accuracy'])
 
 sct_img = sct.grab(bounding_box)
 np_img = np.array(sct_img)
@@ -46,14 +46,15 @@ while True:
     [randint(0,256), randint(0,256), randint(0,256)],
     10
   )
-  img32 = tf.cast(resized_image, tf.int32)
+  img32 = tf.cast(resized_image, tf.float32)
   #img32 = np.expand_dims(img32, axis=2)
 
   cv2.imshow('screen', resized_image)
   x,y,w,h = cv2.getWindowImageRect('screen')
   batch = np.expand_dims(img32, axis=0)
-  batch = tf.tile(batch, [2,1,1,1])
+  batch = tf.tile(batch, [1,1,1,1])
 
+  print(batch.shape)
 
   predictions = model.predict(batch)
 

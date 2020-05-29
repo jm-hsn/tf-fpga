@@ -33,8 +33,6 @@ namespace tf_lib {
     private:
 
       int instance = -1;
-      int delay = 1000;
-
       
       int tagCounter = 0;
 

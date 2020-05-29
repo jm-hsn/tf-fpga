@@ -64,10 +64,9 @@ namespace tf_lib {
   }
 
   REGISTER_OP("MyConv2D")
-      .Input("input: int32")
-      .Input("filter: int32")
-      .Attr("delay: int")
-      .Output("output: int32")
+      .Input("input: float")
+      .Input("filter: float")
+      .Output("output: float")
       .SetShapeFn([](InferenceContext* c) {
         //INPUT: NHWC
         //KERNEL: HWIO

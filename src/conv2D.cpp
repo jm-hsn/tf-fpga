@@ -9,8 +9,6 @@ namespace tf_lib {
 
   Conv2DOp::Conv2DOp(OpKernelConstruction* context) : AsyncOpKernel(context) {
     instance = instances++;
-    OP_REQUIRES_OK(context, context->GetAttr("delay", &delay));
-
   };
 
   void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
@@ -52,8 +50,9 @@ namespace tf_lib {
     OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));
 
 
-    auto input_tensor = input.tensor<int32, 4>();
-    auto output_tensor = output->tensor<int32, 4>();
+    auto input_tensor = input.tensor<float, 4>();
+    auto kernel_tensor = kernel.tensor<float, 4>();
+    auto output_tensor = output->tensor<float, 4>();
 
     auto worker = connectionManager.createWorker(Module::conv2D_5x5_Module, batchSize * channels * filters);
     {
@@ -65,9 +64,15 @@ namespace tf_lib {
         for(int channel=0; channel<channels; channel++) {
           for(int filter=0; filter<filters; filter++) {
             auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
+            
+            for(int x=0; x<5; x++) {
+              for(int y=0; y<5; y++) {
+                job->setPayload(5*5 + x*outputSize + y, *((uint32_t*)&kernel_tensor(filter, y, x, channel)));
+              }
+            }
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                job->setPayload(x*outputSize + y, input_tensor(sample, x, y, channel));
+                job->setPayload(5*5 + x*outputSize + y, *((uint32_t*)&input_tensor(sample, y, x, channel)));
               }
             }
             job->setReady();
@@ -83,7 +88,7 @@ namespace tf_lib {
             auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                output_tensor(sample, x, y, channel) = job->getResponsePayload(x*outputSize + y);
+                output_tensor(sample, y, x, channel) = job->getResponsePayload(x*outputSize + y);
               }
             }
           }
