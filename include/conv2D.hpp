@@ -16,6 +16,7 @@
 #include "../lib/mlfpga/include/modules.hpp"
 
 #include "entrypoint.hpp"
+#include "helper.hpp"
 
 namespace tf_lib {
 
@@ -23,6 +24,7 @@ namespace tf_lib {
   using namespace std::chrono;
   typedef FunctionDefHelper FDH;
 
+  extern ShapeFunction conv2d_shape_fn;
 
   class Conv2DOp : public AsyncOpKernel {
     public:

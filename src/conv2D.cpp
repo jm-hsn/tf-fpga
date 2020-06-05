@@ -7,12 +7,62 @@ namespace tf_lib {
   volatile int inParallel = 0;
   std::mutex printMu;
 
+  ShapeFunction conv2d_shape_fn = [](InferenceContext* c) {
+    //INPUT: NHWC
+    //KERNEL: HWIO
+    //OUTPUT: NHWC
+
+    constexpr int num_spatial_dims = 2;
+    TensorFormat data_format;
+    FormatFromString("NHWC", &data_format);
+    FilterTensorFormat filter_format;
+    FilterFormatFromString("HWIO", &filter_format);
+
+    ShapeHandle input_shape, filter_shape, output_shape;
+    TF_RETURN_IF_ERROR(c->WithRank(c->input(0), 4, &input_shape));
+    TF_RETURN_IF_ERROR(c->WithRank(c->input(1), 4, &filter_shape));
+
+    DimensionHandle batch_size_dim;
+    DimensionHandle input_depth_dim;
+    gtl::InlinedVector<DimensionHandle, 2> input_spatial_dims(2);
+    TF_RETURN_IF_ERROR(DimensionsFromShape(
+      input_shape, data_format, &batch_size_dim,
+      absl::MakeSpan(input_spatial_dims), &input_depth_dim, c));
+
+    DimensionHandle output_depth_dim = c->Dim(
+      filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'O'));
+      /*
+    DimensionHandle filter_rows_dim = c->Dim(
+      filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'H'));
+    DimensionHandle filter_cols_dim = c->Dim(
+      filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'W'));
+      */
+    DimensionHandle filter_input_depth_dim = c->Dim(
+      filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'I'));
+
+    DimensionHandle output_rows, output_cols, output_channels;
+    c->Add(input_spatial_dims[0], 0, &output_rows);
+    c->Add(input_spatial_dims[1], 0, &output_cols);
+
+    c->Multiply(filter_input_depth_dim, output_depth_dim, &output_channels);
+
+    std::vector<DimensionHandle> out_dims(4);
+    out_dims[0] = batch_size_dim;
+    out_dims[1] = output_rows;
+    out_dims[2] = output_cols;
+    out_dims[3] = output_channels;
+
+    output_shape = c->MakeShape(out_dims);
+    c->set_output(0, output_shape);
+    return Status::OK();
+  };
+
   Conv2DOp::Conv2DOp(OpKernelConstruction* context) : AsyncOpKernel(context) {
     instance = instances++;
   };
 
   void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
-    connectionManager.startFromTensorflow();
+    init();
     // Input tensor is of the following dimensions:
     // [ batch, in_rows, in_cols, in_depth ]
     const Tensor& input = context->input(0);

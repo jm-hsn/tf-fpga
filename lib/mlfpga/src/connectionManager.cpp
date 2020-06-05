@@ -30,19 +30,6 @@ void ConnectionManager::removeFinishedWorkers() {
   );
 }
 
-void ConnectionManager::startFromTensorflow() {
-  if(isRunning())
-    return;
-
-  addFPGA("192.168.1.33", 1234);
-  addFPGA("192.168.1.34", 1234);
-  addFPGA("192.168.1.35", 1234);
-
-  start();
-
-  printf("fpga server started\n");
-}
-
 void ConnectionManager::start() {
   running = true;
   sendResult = std::async(std::launch::async, &ConnectionManager::sendThread, this);

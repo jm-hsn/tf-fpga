@@ -7,7 +7,7 @@ namespace tf_lib {
   };
 
   void DummyOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
-    connectionManager.startFromTensorflow();
+    init();
     // Input tensor is of the following dimensions:
     // [ batch, in_rows, in_cols, in_depth ]
     const Tensor& input = context->input(0);
