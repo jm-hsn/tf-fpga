@@ -3,9 +3,8 @@ import numpy as np
 from IPython import embed
 
 import sys
-import os
-sys.path.append('..')
-from hostLib.layers.conv2D import Conv2D as Conv2DFPGA
+sys.path.append('../hostLib/')
+from hostLib.layers.conv2d import Conv2D as Conv2DFPGA
 from hostLib import load_op
 
 

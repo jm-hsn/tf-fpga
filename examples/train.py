@@ -10,8 +10,8 @@ import numpy as np
 from IPython import embed
 
 import sys
-sys.path.append('..')
-from hostLib.layers.conv2D import Conv2D as Conv2DFPGA
+sys.path.append('../hostLib/')
+from hostLib.layers.conv2d import Conv2D as Conv2DFPGA
 
 batch_size = 128
 num_classes = 10

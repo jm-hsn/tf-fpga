@@ -13,8 +13,8 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 
 import sys
-sys.path.append('..')
-from hostLib.layers.conv2D import Conv2D as Conv2DFPGA
+sys.path.append('../hostLib/')
+from hostLib.layers.conv2d import Conv2D as Conv2DFPGA
 
 bounding_box = {'top': 0, 'left': 0, 'width': 2560, 'height': 1440}
 width, height = 228, 228

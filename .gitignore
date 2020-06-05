@@ -3,4 +3,4 @@
 .vscode/
 *.tar
 __pycache__
-/build/
+/c++/build/

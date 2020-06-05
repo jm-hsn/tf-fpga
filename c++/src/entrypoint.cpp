@@ -17,7 +17,7 @@ namespace tf_lib {
   REGISTER_OP("MyDummy")
     .Input("input: int32")
     .Output("output: int32")
-    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+    .SetShapeFn([](InferenceContext* c) {
       c->set_output(0, c->input(0));
       return Status::OK();
     });
@@ -28,7 +28,7 @@ namespace tf_lib {
   REGISTER_OP("MyDummyBig")
     .Input("input: int32")
     .Output("output: int32")
-    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
+    .SetShapeFn([](InferenceContext* c) {
       c->set_output(0, c->input(0));
       return Status::OK();
     });
