@@ -52,7 +52,6 @@ int main(void)
     
     connectionManager.addFPGA("192.168.1.33", 1234);
     connectionManager.addFPGA("192.168.1.34", 1234);
-    connectionManager.addFPGA("192.168.1.35", 1234);
 
     connectionManager.setSendDelay(microseconds(50));
 

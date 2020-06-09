@@ -2,7 +2,7 @@
 #define ENTRY_FPGA_H
 
 #include <fstream>
-#include "../lib/json/single_include/nlohmann/json.hpp"
+#include "json.hpp"
 
 #include "tensorflow/core/framework/op.h"
 #include "tensorflow/core/framework/shape_inference.h"
