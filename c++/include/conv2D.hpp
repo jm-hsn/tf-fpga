@@ -39,11 +39,11 @@ namespace tf_lib {
       int tagCounter = 0;
 
       int width = 224;
-      int kernel = 5;
-      int border = kernel/2;
+      int kernelSize = 5;
+      int border = kernelSize/2;
       int sizeWithBorder = width + 2*border;
       int pixels = sizeWithBorder * sizeWithBorder;
-      int outputSize = sizeWithBorder;
+      int outputSize = width;
 
 
     //TF_DISALLOW_COPY_AND_ASSIGN(Conv2DOp);

@@ -10,7 +10,7 @@ import time
 from random import randint
 
 import tensorflow as tf
-from tensorflow.keras import layers, models
+from tensorflow.keras import layers, models, initializers
 
 import sys
 sys.path.append('../hostLib/')
@@ -23,13 +23,13 @@ sct = mss()
 stop = 0
 
 a = layers.Input(dtype=tf.float32, shape=(width, height, 3))
-z = Conv2DFPGA(1)(a)
+z = Conv2DFPGA(1, kernel_initializer=initializers.Constant(1/25))(a)
 model = models.Model(inputs=a, outputs=z)
 
 
-model.compile(loss=tf.keras.losses.categorical_crossentropy,
-              optimizer=tf.keras.optimizers.Adadelta(),
-              metrics=['accuracy'])
+#model.compile(loss=tf.keras.losses.categorical_crossentropy,
+#              optimizer=tf.keras.optimizers.Adadelta(),
+#              metrics=['accuracy'])
 
 sct_img = sct.grab(bounding_box)
 np_img = np.array(sct_img)
@@ -59,7 +59,7 @@ while True:
   predictions = model.predict(batch)
 
 
-  pred8 = tf.cast(predictions / 256, tf.uint8)
+  pred8 = tf.cast(predictions, tf.uint8)
   for i in range(pred8.shape[0]):
     name = 'conv_{}'.format(i)
     cv2.imshow(name, pred8.numpy()[i])

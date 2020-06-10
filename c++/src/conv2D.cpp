@@ -41,8 +41,8 @@ namespace tf_lib {
       filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'I'));
 
     DimensionHandle output_rows, output_cols, output_channels;
-    c->Add(input_spatial_dims[0], 0, &output_rows);
-    c->Add(input_spatial_dims[1], 0, &output_cols);
+    c->Subtract(input_spatial_dims[0], 4, &output_rows);
+    c->Subtract(input_spatial_dims[1], 4, &output_cols);
 
     c->Multiply(filter_input_depth_dim, output_depth_dim, &output_channels);
 
@@ -76,6 +76,10 @@ namespace tf_lib {
     TensorShape kernel_shape = kernel.shape();
     TensorShape input_shape = input.shape();
 
+    OP_REQUIRES_ASYNC(context, input_shape.dim_size(1) == 228, errors::InvalidArgument("Unsupported input height: ", input_shape.dim_size(1)), done);
+    OP_REQUIRES_ASYNC(context, input_shape.dim_size(2) == 228, errors::InvalidArgument("Unsupported input width: ", input_shape.dim_size(2)), done);
+    OP_REQUIRES_ASYNC(context, kernel_shape.dim_size(0) == 5, errors::InvalidArgument("Unsupported kernel height: ", kernel_shape.dim_size(0)), done);
+    OP_REQUIRES_ASYNC(context, kernel_shape.dim_size(1) == 5, errors::InvalidArgument("Unsupported kernel width: ", kernel_shape.dim_size(1)), done);
 
     int batchSize = input_shape.dim_size(0);
     int channels = input_shape.dim_size(3);
@@ -115,14 +119,14 @@ namespace tf_lib {
           for(int filter=0; filter<filters; filter++) {
             auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
             
-            for(int x=0; x<5; x++) {
-              for(int y=0; y<5; y++) {
-                job->setPayload(5*5 + x*outputSize + y, *((uint32_t*)&kernel_tensor(filter, y, x, channel)));
+            for(int x=0; x<kernelSize; x++) {
+              for(int y=0; y<kernelSize; y++) {
+                job->setPayload(y*kernelSize + x, *((uint32_t*)&kernel_tensor(y, x, channel, filter)));
               }
             }
-            for(int x=0; x<outputSize; x++) {
-              for(int y=0; y<outputSize; y++) {
-                job->setPayload(5*5 + x*outputSize + y, *((uint32_t*)&input_tensor(sample, y, x, channel)));
+            for(int x=0; x<sizeWithBorder; x++) {
+              for(int y=0; y<sizeWithBorder; y++) {
+                job->setPayload(kernelSize*kernelSize + y*sizeWithBorder + x, *((uint32_t*)&input_tensor(sample, y, x, channel)));
               }
             }
             job->setReady();
@@ -138,7 +142,8 @@ namespace tf_lib {
             auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                output_tensor(sample, y, x, channel) = job->getResponsePayload(x*outputSize + y);
+                uint32_t val = job->getResponsePayload((y+border*2)*sizeWithBorder + (x+border*2) + 1);
+                output_tensor(sample, y, x, channel) = *((float*)&val);
               }
             }
           }

@@ -91,6 +91,7 @@ int Worker::threadMain() {
                   }
                 } else {
                   job->setState(JobState::failed);
+                  printf("job %08X: \x1b[31mfailed\x1b[0m no.: %3lu\n", job->getJobId(), currentI);
                   job->setReceived(false);
                 }
               }

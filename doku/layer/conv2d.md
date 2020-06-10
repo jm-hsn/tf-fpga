@@ -3,16 +3,16 @@
 ## Tensorgröße
 
 Input:
-- in TF: `[batchSize, imageX, imageY, channels]`
-- an FPGA: `[imageX, imageY]`
+- in TF: `[batchSize, imageY, imageX, channels]`
+- an FPGA: `[imageY, imageX]`
 
 Kernel:
-- in TF: `[kernelX, kernelY, channels, filters]`
-- an FPGA: `[kernelX, kernelY]`
+- in TF: `[kernelY, kernelX, channels, filters]`
+- an FPGA: `[kernelY, kernelX]`
 
 Output:
-- vom FPGA: `[imageX2, imageY2]`
-- an TF: `[batchSize, imageX2, imageY2, channels * filters]`
+- vom FPGA: `[imageY2, imageX2]`
+- an TF: `[batchSize, imageY2, imageX2, channels * filters]`
 
 ## Parallelisierung
 
