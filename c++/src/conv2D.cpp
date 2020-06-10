@@ -36,15 +36,15 @@ namespace tf_lib {
       filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'H'));
     DimensionHandle filter_cols_dim = c->Dim(
       filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'W'));
-      */
+      
     DimensionHandle filter_input_depth_dim = c->Dim(
       filter_shape, GetFilterDimIndex<num_spatial_dims>(filter_format, 'I'));
-
+      */
     DimensionHandle output_rows, output_cols, output_channels;
     c->Subtract(input_spatial_dims[0], 4, &output_rows);
     c->Subtract(input_spatial_dims[1], 4, &output_cols);
 
-    c->Multiply(filter_input_depth_dim, output_depth_dim, &output_channels);
+    c->Subtract(output_depth_dim, 0, &output_channels);
 
     std::vector<DimensionHandle> out_dims(4);
     out_dims[0] = batch_size_dim;
@@ -80,19 +80,21 @@ namespace tf_lib {
     OP_REQUIRES_ASYNC(context, input_shape.dim_size(2) == 228, errors::InvalidArgument("Unsupported input width: ", input_shape.dim_size(2)), done);
     OP_REQUIRES_ASYNC(context, kernel_shape.dim_size(0) == 5, errors::InvalidArgument("Unsupported kernel height: ", kernel_shape.dim_size(0)), done);
     OP_REQUIRES_ASYNC(context, kernel_shape.dim_size(1) == 5, errors::InvalidArgument("Unsupported kernel width: ", kernel_shape.dim_size(1)), done);
+    OP_REQUIRES_ASYNC(context, kernel_shape.dim_size(2) == input_shape.dim_size(3), 
+      errors::InvalidArgument("kernel channels != input channels: ", kernel_shape.dim_size(2), " != ", input_shape.dim_size(3)), done);
 
     int batchSize = input_shape.dim_size(0);
     int channels = input_shape.dim_size(3);
-    int filters = kernel_shape.dim_size(3);
+    int outputChannels = kernel_shape.dim_size(3);
 
     TensorShape output_shape;
-    const int32 dims[] = {batchSize, outputSize, outputSize, channels * filters};
+    const int32 dims[] = {batchSize, outputSize, outputSize, outputChannels};
     TensorShapeUtils::MakeShape(dims, 4, &output_shape);
 
     output_shape.set_dim(0, batchSize);
     output_shape.set_dim(1, outputSize);
     output_shape.set_dim(2, outputSize);
-    output_shape.set_dim(3, channels * filters);
+    output_shape.set_dim(3, outputChannels);
 
     //printMu.lock();
     //std::cout << output_shape.DebugString() << std::endl;
@@ -108,20 +110,20 @@ namespace tf_lib {
     auto kernel_tensor = kernel.tensor<float, 4>();
     auto output_tensor = output->tensor<float, 4>();
 
-    auto worker = connectionManager.createWorker(Module::conv2D_5x5_Module, batchSize * channels * filters);
+    auto worker = connectionManager.createWorker(Module::conv2D_5x5_Module, batchSize * channels * outputChannels);
     {
       worker->setJobTimeout(milliseconds(300));
       worker->setRetryCount(10);
       auto jobs = worker->getJobList();
 
       for(int sample=0; sample<batchSize; sample++) {
-        for(int channel=0; channel<channels; channel++) {
-          for(int filter=0; filter<filters; filter++) {
-            auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
+        for(int outputChannel=0; outputChannel<outputChannels; outputChannel++) {
+          for(int channel=0; channel<channels; channel++) {
+            auto job = jobs->getJob(sample * outputChannels * channels + outputChannel * channels + channel);
             
             for(int x=0; x<kernelSize; x++) {
               for(int y=0; y<kernelSize; y++) {
-                job->setPayload(y*kernelSize + x, *((uint32_t*)&kernel_tensor(y, x, channel, filter)));
+                job->setPayload(y*kernelSize + x, *((uint32_t*)&kernel_tensor(y, x, channel, outputChannel)));
               }
             }
             for(int x=0; x<sizeWithBorder; x++) {
@@ -134,16 +136,21 @@ namespace tf_lib {
         }
       }
     }
-    worker->setDoneCallback([output_tensor, worker, done, batchSize, channels, filters, this]{
+    worker->setDoneCallback([output_tensor, worker, done, batchSize, channels, outputChannels, this]{
       auto jobs = worker->getJobList();
       for(int sample=0; sample<batchSize; sample++) {
-        for(int channel=0; channel<channels; channel++) {
-          for(int filter=0; filter<filters; filter++) {
-            auto job = jobs->getJob(sample * channels * filters + channel * filters + filter);
+        for(int outputChannel=0; outputChannel<outputChannels; outputChannel++) {
+          for(int x=0; x<outputSize; x++) {
+            for(int y=0; y<outputSize; y++) {
+              output_tensor(sample, y, x, outputChannel) = 0;
+            }
+          }
+          for(int channel=0; channel<channels; channel++) {
+            auto job = jobs->getJob(sample * outputChannels * channels + outputChannel * channels + channel);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                uint32_t val = job->getResponsePayload((y+border*2)*sizeWithBorder + (x+border*2) + 1);
-                output_tensor(sample, y, x, channel) = *((float*)&val);
+                uint32_t val = job->getResponsePayload((y+border*2)*sizeWithBorder + (x+border*2));
+                output_tensor(sample, y, x, outputChannel) += *((float*)&val);
               }
             }
           }
