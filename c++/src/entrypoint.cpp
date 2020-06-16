@@ -6,14 +6,6 @@ namespace tf_lib {
   using namespace tensorflow;
   using namespace tensorflow::shape_inference;
 
-  REGISTER_OP("MyConv2D")
-      .Input("input: float")
-      .Input("filter: float")
-      .Output("output: float")
-      .SetShapeFn(conv2d_shape_fn);
-
-  REGISTER_KERNEL_BUILDER(Name("MyConv2D").Device(DEVICE_CPU), Conv2DOp);
-
   REGISTER_OP("MyDummy")
     .Input("input: int32")
     .Output("output: int32")

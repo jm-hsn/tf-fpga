@@ -1,4 +1,7 @@
 import tensorflow as tf
+from tensorflow.python.ops import nn_ops
+from tensorflow.python.framework import ops
+from tensorflow.python.ops import array_ops
 from tensorflow.python.framework import tensor_shape
 from tensorflow.keras import layers, initializers, regularizers, constraints
 
@@ -36,3 +39,24 @@ class Conv2D(layers.Layer):
   def call(self, inputs):
 
     return load_op.op_lib.MyConv2D(input=inputs, filter=self.kernel)
+
+@ops.RegisterGradient("MyConv2D")
+def _my_conv_2d_grad(op, grad):
+  shape_0, shape_1 = array_ops.shape_n([op.inputs[0], op.inputs[1]])
+
+  return [
+      nn_ops.conv2d_backprop_input(
+          shape_0,
+          op.inputs[1],
+          grad,
+          strides=[1,1,1,1],
+          padding="VALID"
+          ),
+      nn_ops.conv2d_backprop_filter(
+          op.inputs[0],
+          shape_1,
+          grad,
+          strides=[1,1,1,1],
+          padding="VALID"
+          )
+  ]

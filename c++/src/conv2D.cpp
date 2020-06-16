@@ -196,7 +196,7 @@ namespace tf_lib {
   }
 
   Status MatMulGrad(const AttrSlice& attrs, FunctionDef* g) {
-    const string opname = "MyMatMul";
+    const string opname = "MyConv2D";
     const string attr_adj_x = "transpose_a";
     const string attr_adj_y = "transpose_b";
     DataType T;
@@ -226,4 +226,14 @@ namespace tf_lib {
     return MatMulGradHelper(g, opname, attr_adj_x, attr_adj_y, "y", true, "dz",
                             true, "dz", true, "x", true);
   }
+
+  REGISTER_OP("MyConv2D")
+      .Input("input: float")
+      .Input("filter: float")
+      .Output("output: float")
+      .SetShapeFn(conv2d_shape_fn);
+
+  REGISTER_KERNEL_BUILDER(Name("MyConv2D").Device(DEVICE_CPU), Conv2DOp);
+  REGISTER_OP_GRADIENT("MyConv2D", MatMulGrad);
+
 }
