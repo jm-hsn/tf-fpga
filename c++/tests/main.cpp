@@ -68,7 +68,7 @@ int main(void)
             work();
         }
         std::unique_lock<std::mutex> lk(statsLk);
-        printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu  %4lu MBit/s\n", workNum, connectionManager.getWorkerCount(), f, s, r, s*(moduleSendPayloadLength[mod]+4)*4*10*8/1024/1024/3/(n++));
+        printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu  %8.3f MBit/s\n", workNum, connectionManager.getWorkerCount(), f, s, r, (float)s*(moduleSendPayloadLength[mod]+4)*4*10*8/1024/1024/3/(n++));
     }
     return 0;
 }

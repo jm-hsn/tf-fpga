@@ -19,11 +19,12 @@ OBJS=$(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(SRCS))
 FPGA_LIB_SRCS=$(wildcard $(FPGA_LIB_DIR)/$(SRC_DIR)/*.cpp)
 FPGA_LIB_OBJS=$(patsubst $(FPGA_LIB_DIR)/$(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(FPGA_LIB_SRCS))
 
-TESTS_SRCS=$(wildcard $(TESTS_DIR)/*.cpp)
-FPGA_LIB_TESTS_SRCS=$(wildcard $(FPGA_LIB_DIR)/$(TESTS_DIR)/*.cpp)
+TESTS_SRCS=$(wildcard $(TESTS_DIR)/main.cpp)
+ECHO_SRCS=$(wildcard $(TESTS_DIR)/echo.cpp)
 
 EXECUTABLE=op_lib.so
 TEST_EXEC=test
+ECHO_EXEC=echo
 
 all: config $(BUILD_DIR)/$(EXECUTABLE)
 
@@ -44,7 +45,10 @@ test: config $(BUILD_DIR)/$(EXECUTABLE) $(BUILD_DIR)/$(TEST_EXEC)
 $(BUILD_DIR)/$(TEST_EXEC): $(TESTS_SRCS) $(FPGA_LIB_OBJS)
 	$(CXX) $(CFLAGS) -I$(FPGA_LIB_DIR)/$(INC_DIR) -o $@ $^
 
+echo: $(BUILD_DIR)/$(ECHO_EXEC)
 
+$(BUILD_DIR)/$(ECHO_EXEC): $(ECHO_SRCS)
+	$(CXX) $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/$(EXECUTABLE) $(BUILD_DIR)/$(TEST_EXEC)
+	rm -f $(BUILD_DIR)/*.o $(BUILD_DIR)/$(EXECUTABLE) $(BUILD_DIR)/$(TEST_EXEC) $(BUILD_DIR)/$(ECHO_EXEC)
