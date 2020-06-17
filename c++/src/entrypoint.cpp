@@ -31,8 +31,10 @@ namespace tf_lib {
   ConnectionManager connectionManager;
 
   bool hasInitialized = false;
+  std::mutex initMu;
 
   void init() {
+    std::unique_lock<std::mutex> initLock(initMu);
     if(hasInitialized)
       return;
 
