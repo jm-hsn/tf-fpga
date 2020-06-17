@@ -1,3 +1,5 @@
+# from https://keras.io/examples/mnist_cnn/
+
 import tensorflow as tf
 import tensorflow.keras as keras
 from tensorflow.keras import layers
@@ -38,26 +40,19 @@ print(x_test.shape[0], 'test samples')
 y_train = to_categorical(y_train, num_classes)
 y_test = to_categorical(y_test, num_classes)
 
-i = layers.Input(shape=(28, 28, 1))
-a = layers.Lambda(lambda x: tf.image.resize(x, (228,228)))(i)
-b = Conv2DFPGA(2)(a)
-c = Conv2DFPGA(1)(a)
-d = Conv2DFPGA(1)(layers.Lambda(lambda x: tf.image.resize(x, (228,228)))(b))
-e = Conv2DFPGA(2)(layers.Lambda(lambda x: tf.image.resize(x, (228,228)))(c))
-
-print(a)
-print(b)
-print(c)
-print(d)
-print(e)
-
-x = layers.Add()([d,e])
-y = layers.Flatten()(x)
-z = layers.Dense(num_classes, activation='softmax')(y)
-
-model = Model(inputs=i, outputs=z)
-
-print(model.output_shape)
+model = Sequential()
+model.add(layers.Lambda(lambda x: tf.image.resize(x, (228,228)))) #to-do: implement 2 stage 28x28_3x3 conv2d with relu
+model.add(Conv2DFPGA(1))#32
+model.add(layers.Activation('relu'))
+model.add(layers.Lambda(lambda x: tf.image.resize(x, (228,228))))
+model.add(Conv2DFPGA(1))#64
+model.add(layers.Activation('relu'))
+model.add(MaxPooling2D(pool_size=(int(228/28*2), int(228/28*2))))
+model.add(Dropout(0.25))
+model.add(Flatten())
+model.add(Dense(128, activation='relu'))
+model.add(Dropout(0.5))
+model.add(Dense(num_classes, activation='softmax'))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
