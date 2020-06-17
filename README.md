@@ -7,7 +7,7 @@
   - `layers/`     Layer definitions
 - `c++/`          TensorFlow custom operator library
   - `lib/mlfpga/` FPGA data transfer library
-- [/bachelor/vhdl-modules](/bachelor/vhdl-modules) VHDL implementation
+- [/bachelor/vhdl-modules](https://gitlab.justprojects.de/bachelor/vhdl-modules) VHDL implementation
 
 ## Usage
 
@@ -54,7 +54,7 @@ model.add(Conv2DFPGA(1))
     > ...
     > /usr/bin/g++ ... -o build/op_lib.so ...
     ```
-5. update `config.json` with your FPGA addresses defined in the [VHDL design](/bachelor/vhdl-modules)
+5. update `config.json` with your FPGA addresses defined in the [VHDL design](https://gitlab.justprojects.de/bachelor/vhdl-modules)
     ```json
     {"fpgas": [
       {
@@ -75,7 +75,7 @@ model.add(Conv2DFPGA(1))
 ## Adding new custom layers
 For more details on how to contribute to git projects see https://gist.github.com/MarcDiethelm/7303312.
 
-0. create a computation module in the [FPGA implementation](/bachelor/vhdl-modules)
+0. create a computation module in the [FPGA implementation](https://gitlab.justprojects.de/bachelor/vhdl-modules)
 1. add your FPGA module to the list of modules `c++/lib/mlfpga/include/modules.hpp`
 
     then the `MOD_DEF` macro creates these entries automagically:
@@ -161,10 +161,16 @@ For more details on how to contribute to git projects see https://gist.github.co
     ```
 
 ## Tests
-There are tests for each complexity layer of this project.
+There are tests for each complexity level of this project.
 
-1. loopback test without connected FPGAs `c++/tests/main.cpp`
+1. loopback test without connected FPGAs. This will only succeed for modules that have equal input and output lengths.
 
+    compile the UDP echo server and run it in a seperate terminal:
+    ```bash
+    cd ./c++
+    make echo
+    ./build/echo
+    ```
     edit `config.json`:
     ```json
     {"fpgas": [
@@ -174,13 +180,11 @@ There are tests for each complexity layer of this project.
       }
     ]}
     ```
-    then run UDP echo server in the background:
+    then run any dummy module test:
     ```bash
-    python3 tests/echo.py &
-    cd ./c++
-    make test
-    ./build/test
+    python3 tests/op_test.py
     ```
+    ![echo_test](doku/echo_test.png)
 
 2. FPGA communication test `c++/tests/main.cpp`
     ```bash
@@ -188,12 +192,13 @@ There are tests for each complexity layer of this project.
     make test
     ./build/test
     ```
+    ![comm_test](doku/comm_test.png)
 
 3. operator validation test, based on TFs test suite `tests/op_test.py`
     ```bash
     python3 tests/op_test.py
     ```
-
+    ![op_test](doku/op_test.png)
 
 ## Dependencies
 
