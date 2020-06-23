@@ -23,8 +23,9 @@ Output:
     ```python
     for sample in range(batchSize):
       for outputChannel in range(outputChannels):
-        output[sample][outputChannel] = sum([f(
-          input[sample][channel], 
-          kernel[channel][outputChannel]
-        ) for channel in range(channels)])
+        for channel in range(channels):
+          output[sample][outputChannel] += f(
+            input[sample][channel], 
+            kernel[channel][outputChannel]
+          )
     ```
