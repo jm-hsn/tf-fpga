@@ -9,18 +9,18 @@ from .. import load_op
 
 class Conv2D(layers.Layer):
   def __init__(self,
-    filters = 1,
-    kernel_initializer = 'glorot_uniform',
+               filters = 1,
+               kernel_initializer = 'glorot_uniform',
                kernel_regularizer=None,
                kernel_constraint=None,
-    ):
+               implementation = 1):
     super(Conv2D, self).__init__()
     #int, dim of output space
     self.filters = filters
     self.kernel_initializer = initializers.get(kernel_initializer)
     self.kernel_regularizer = regularizers.get(kernel_regularizer)
     self.kernel_constraint = constraints.get(kernel_constraint)
-
+    self.implementation = implementation
 
   def build(self, input_shape):
     input_shape = tf.TensorShape(input_shape)
@@ -37,10 +37,16 @@ class Conv2D(layers.Layer):
         dtype=self.dtype)
 
   def call(self, inputs):
+    if self.implementation == 1:
+      return load_op.op_lib.MyConv2D_1(input=inputs, filter=self.kernel)
+    if self.implementation == 2:
+      return load_op.op_lib.MyConv2D_2(input=inputs, filter=self.kernel)
+    if self.implementation == 3:
+      return load_op.op_lib.MyConv2D_3(input=inputs, filter=self.kernel)
 
-    return load_op.op_lib.MyConv2D(input=inputs, filter=self.kernel)
-
-@ops.RegisterGradient("MyConv2D")
+@ops.RegisterGradient("MyConv2D_1")
+@ops.RegisterGradient("MyConv2D_2")
+@ops.RegisterGradient("MyConv2D_3")
 def _my_conv_2d_grad(op, grad):
   shape_0, shape_1 = array_ops.shape_n([op.inputs[0], op.inputs[1]])
 

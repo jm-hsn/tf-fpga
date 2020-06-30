@@ -1,5 +1,5 @@
-#ifndef CONV2D_FPGA_H
-#define CONV2D_FPGA_H
+#ifndef CONV2D_1_FPGA_H
+#define CONV2D_1_FPGA_H
 
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/framework/function.h"

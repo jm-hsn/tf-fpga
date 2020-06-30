@@ -1,5 +1,5 @@
 
-#include "conv2D.hpp"
+#include "conv2D_1.hpp"
 
 namespace tf_lib {
 
@@ -149,8 +149,7 @@ namespace tf_lib {
             auto job = jobs->getJob(sample * outputChannels * channels + outputChannel * channels + channel);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                uint32_t val = job->getResponsePayload((y+border*2)*sizeWithBorder + (x+border*2));
-                output_tensor(sample, y, x, outputChannel) += *((float*)&val);
+                memcpy(&output_tensor(sample, y, x, outputChannel), &job->getResponseAddr()[(y+border*2)*sizeWithBorder + (x+border*2)], 4);
               }
             }
           }
@@ -227,13 +226,13 @@ namespace tf_lib {
                             true, "dz", true, "x", true);
   }
 
-  REGISTER_OP("MyConv2D")
+  REGISTER_OP("MyConv2D_1")
       .Input("input: float")
       .Input("filter: float")
       .Output("output: float")
       .SetShapeFn(conv2d_shape_fn);
 
-  REGISTER_KERNEL_BUILDER(Name("MyConv2D").Device(DEVICE_CPU), Conv2DOp);
-  REGISTER_OP_GRADIENT("MyConv2D", MatMulGrad);
+  REGISTER_KERNEL_BUILDER(Name("MyConv2D_1").Device(DEVICE_CPU), Conv2DOp);
+  REGISTER_OP_GRADIENT("MyConv2D_1", MatMulGrad);
 
 }
