@@ -6,7 +6,7 @@ BUILD_DIR=build
 TESTS_DIR=tests
 FPGA_LIB_DIR=lib/mlfpga
 
-CFLAGS=-g -Wall -pthread -std=c++11
+CFLAGS=-g -Wall -pthread -std=c++11 -O3
 LFLAGS=-shared -Wl,--no-as-needed,-Map=$(BUILD_DIR)/project.map
 
 
