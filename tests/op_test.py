@@ -49,7 +49,7 @@ class FPGALibTest(tf.test.TestCase):
     filter = tf.constant(np.expand_dims(kernel, (2, 3)), dtype=float)
     with self.session():
       ref = nn.convolution(input, filter)
-      result = load_op.op_lib.MyConv2D(input=input, filter=filter)
+      result = load_op.op_lib.MyConv2D_1(input=input, filter=filter)
       self.assertAllClose(result, ref)
 
   def testConv2DRandom(self):
@@ -57,7 +57,7 @@ class FPGALibTest(tf.test.TestCase):
     filter = tf.random.uniform(shape=[5,5,1,1])
     with self.session():
       ref = nn.convolution(input, filter)
-      result = load_op.op_lib.MyConv2D(input=input, filter=filter)
+      result = load_op.op_lib.MyConv2D_1(input=input, filter=filter)
       self.assertAllClose(result, ref)
 
   def testConv2DMulti(self):
@@ -65,7 +65,7 @@ class FPGALibTest(tf.test.TestCase):
     filter = tf.random.uniform(shape=[5,5,3,4])
     with self.session():
       ref = nn.convolution(input, filter)
-      result = load_op.op_lib.MyConv2D(input=input, filter=filter)
+      result = load_op.op_lib.MyConv2D_1(input=input, filter=filter)
       self.assertAllClose(result, ref)
 
 if __name__ == "__main__":
