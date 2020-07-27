@@ -3,13 +3,14 @@
 
 ConnectionManager connectionManager;
 
-Module mod = Module::dummyBigModule;
+Module mod = Module::conv2D_5x5_Module;
+unsigned int jobsPerWorker = 100;
 
 size_t s=0, f=0, r=0;
 std::mutex statsLk;
 
 void work() {
-    auto worker = connectionManager.createWorker(mod, 1000);
+    auto worker = connectionManager.createWorker(mod, jobsPerWorker);
 
     worker->setJobTimeout(milliseconds(1000));
     worker->setRetryCount(10);
@@ -45,30 +46,49 @@ void work() {
     worker->startAsync();
 }
 
-int main(void)
+int main(int argc, char *argv[])
 {
     puts("This is a shared library test...");
 
+    unsigned int numFPGA = 3;
+    unsigned int workNum = 100;
+    unsigned int workerCount = 1;
+
+    if(argc > 1)
+        numFPGA = atoi(argv[1]);
     
-    connectionManager.addFPGA("192.168.1.33", 1234);
-    connectionManager.addFPGA("192.168.1.34", 1234);
+    if(numFPGA >= 1)
+        connectionManager.addFPGA("192.168.1.33", 1234);
+    if(numFPGA >= 2)
+        connectionManager.addFPGA("192.168.1.34", 1234);
+    if(numFPGA >= 3)
+        connectionManager.addFPGA("192.168.1.35", 1234);
 
     connectionManager.setSendDelay(microseconds(50));
-
     connectionManager.start();
 
-    int workNum = 10000;
-    int n=1;
+    if(argc > 2)
+        workNum = atoi(argv[2]);
+
+    if(argc > 3)
+        workerCount = atoi(argv[3]);
+
+    if(argc > 4)
+        jobsPerWorker = atoi(argv[4]);
     
+    printf("arguments: <numFPGA = %u> <workNum = %u> <workerCount = %u> <jobsPerWorker = %u>\n", numFPGA, workNum, workerCount, jobsPerWorker);
+
     while(workNum > 0 || connectionManager.getWorkerCount() > 0) {
-        std::this_thread::sleep_for(milliseconds(300));
+        std::this_thread::sleep_for(microseconds(1000));
         connectionManager.removeFinishedWorkers();
-        while(workNum > 0 && connectionManager.getWorkerCount() < 8) {
+        while(workNum > 0 && connectionManager.getWorkerCount() < workerCount) {
             workNum--;
             work();
+            std::unique_lock<std::mutex> lk(statsLk);
+            printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu\n", workNum, connectionManager.getWorkerCount(), f, s, r);
         }
-        std::unique_lock<std::mutex> lk(statsLk);
-        printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu  %8.3f MBit/s\n", workNum, connectionManager.getWorkerCount(), f, s, r, (float)s*(moduleSendPayloadLength[mod]+4)*4*10*8/1024/1024/3/(n++));
     }
+        std::unique_lock<std::mutex> lk(statsLk);
+        printf("work: %2d   worker: %2lu failed: %12lu, successful: %12lu, retries: %12lu\n", workNum, connectionManager.getWorkerCount(), f, s, r);
     return 0;
 }
