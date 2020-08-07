@@ -7,7 +7,7 @@
   - `layers/`     Layer definitions
 - `c++/`          TensorFlow custom operator library
   - `lib/mlfpga/` FPGA data transfer library
-- [/bachelor/vhdl-modules](https://gitlab.justprojects.de/bachelor/vhdl-modules) VHDL implementation
+- [vhdl-modules](https://github.com/jm-hsn/vhdl-modules) VHDL implementation
 
 ## Usage
 
@@ -54,7 +54,7 @@ model.add(Conv2DFPGA(1))
     > ...
     > /usr/bin/g++ ... -o build/op_lib.so ...
     ```
-5. update `config.json` with your FPGA addresses defined in the [VHDL design](https://gitlab.justprojects.de/bachelor/vhdl-modules)
+5. update `config.json` with your FPGA addresses defined in the [VHDL design](https://github.com/jm-hsn/vhdl-modules)
     ```json
     {"fpgas": [
       {
@@ -75,7 +75,7 @@ model.add(Conv2DFPGA(1))
 ## Adding new custom layers
 For more details on how to contribute to git projects see https://gist.github.com/MarcDiethelm/7303312.
 
-0. create a computation module in the [FPGA implementation](https://gitlab.justprojects.de/bachelor/vhdl-modules)
+0. create a computation module in the [FPGA implementation](https://github.com/jm-hsn/vhdl-modules)
 1. add your FPGA module to the list of modules `c++/lib/mlfpga/include/modules.hpp`
 
     then the `MOD_DEF` macro creates these entries automagically:
