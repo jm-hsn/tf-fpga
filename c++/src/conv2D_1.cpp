@@ -8,7 +8,7 @@ namespace tf_lib {
   std::mutex printMu;
 
   ShapeFunction conv2d_shape_fn = [](InferenceContext* c) {
-    //INPUT: NHWC
+    //INPUT:  NHWC
     //KERNEL: HWIO
     //OUTPUT: NHWC
 
@@ -63,11 +63,11 @@ namespace tf_lib {
 
   void Conv2DOp::ComputeAsync(OpKernelContext* context, DoneCallback done) {
     init();
+    // ############ TensorFlow namespace #############
+
     // Input tensor is of the following dimensions:
     // [ batch, in_rows, in_cols, in_depth ]
     const Tensor& input = context->input(0);
-
-    ///const int32 *p = input.flat<int32>().data();
 
     // Input filter is of the following dimensions:
     // [ filter_rows, filter_cols, in_depth, out_depth]
@@ -87,6 +87,7 @@ namespace tf_lib {
     int channels = input_shape.dim_size(3);
     int outputChannels = kernel_shape.dim_size(3);
 
+    // create output tensor
     TensorShape output_shape;
     const int32 dims[] = {batchSize, outputSize, outputSize, outputChannels};
     TensorShapeUtils::MakeShape(dims, 4, &output_shape);
@@ -96,20 +97,17 @@ namespace tf_lib {
     output_shape.set_dim(2, outputSize);
     output_shape.set_dim(3, outputChannels);
 
-    //printMu.lock();
-    //std::cout << output_shape.DebugString() << std::endl;
-    //printMu.unlock();
-
     // Output tensor is of the following dimensions:
     // [ in_batch, out_rows, out_cols, out_depth ]
     Tensor* output = nullptr;
     OP_REQUIRES_OK(context, context->allocate_output(0, output_shape, &output));
 
-
+    // get data references
     auto input_tensor = input.tensor<float, 4>();
     auto kernel_tensor = kernel.tensor<float, 4>();
     auto output_tensor = output->tensor<float, 4>();
 
+    // ############ FPGA communications library #############
     auto worker = connectionManager.createWorker(Module::conv2D_5x5_Module, batchSize * channels * outputChannels);
     {
       worker->setJobTimeout(milliseconds(300));
@@ -119,13 +117,16 @@ namespace tf_lib {
       for(int sample=0; sample<batchSize; sample++) {
         for(int outputChannel=0; outputChannel<outputChannels; outputChannel++) {
           for(int channel=0; channel<channels; channel++) {
+            // get each job
             auto job = jobs->getJob(sample * outputChannels * channels + outputChannel * channels + channel);
             
+            // write kernel to job
             for(int x=0; x<kernelSize; x++) {
               for(int y=0; y<kernelSize; y++) {
                 job->setPayload(y*kernelSize + x, *((uint32_t*)&kernel_tensor(y, x, channel, outputChannel)));
               }
             }
+            // write input pixels to job
             for(int x=0; x<sizeWithBorder; x++) {
               for(int y=0; y<sizeWithBorder; y++) {
                 job->setPayload(kernelSize*kernelSize + y*sizeWithBorder + x, *((uint32_t*)&input_tensor(sample, y, x, channel)));
@@ -140,16 +141,19 @@ namespace tf_lib {
       auto jobs = worker->getJobList();
       for(int sample=0; sample<batchSize; sample++) {
         for(int outputChannel=0; outputChannel<outputChannels; outputChannel++) {
+          //set output matrix to zero 
           for(int x=0; x<outputSize; x++) {
             for(int y=0; y<outputSize; y++) {
               output_tensor(sample, y, x, outputChannel) = 0;
             }
           }
+          //accumulate the pixels of all output channels
           for(int channel=0; channel<channels; channel++) {
             auto job = jobs->getJob(sample * outputChannels * channels + outputChannel * channels + channel);
             for(int x=0; x<outputSize; x++) {
               for(int y=0; y<outputSize; y++) {
-                memcpy(&output_tensor(sample, y, x, outputChannel), &job->getResponseAddr()[(y+border*2)*sizeWithBorder + (x+border*2)], 4);
+                uint32_t pixel = job->getResponsePayload((y+border*2)*sizeWithBorder + (x+border*2));
+                output_tensor(sample, y, x, outputChannel) += *((float*)&pixel);
               }
             }
           }
