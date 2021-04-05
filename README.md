@@ -1,13 +1,21 @@
 
 # TensorFlow library for adding FPGA based layers
 
+![Assembled System](doku/hardware.jpg)
+
 ## Components
 
+- `examples/`     Library usage examples
 - `hostLib/`      Python wrapper module
   - `layers/`     Layer definitions
 - `c++/`          TensorFlow custom operator library
   - `lib/mlfpga/` FPGA data transfer library
-- [vhdl-modules](https://github.com/jm-hsn/vhdl-modules) VHDL implementation
+    - [2D convolution of one channel](doku/layer/conv2d_1.md)
+    - [2D convolution with activation](doku/layer/conv2d_2.md)
+    - [2D convolution with activation and fixed output channels](doku/layer/conv2d_3.md)
+    - [2D convolution and MaxPooling](doku/layer/conv2d_maxpool.md)
+    - [multiple 2D convolutions with MaxPooling](doku/layer/conv2d_maxpool_multi.md)
+- [vhdl-modules](https://github.com/jm-hsn/vhdl-modules) VHDL implementation in separate Repository
 
 ## Usage
 
